@@ -1,0 +1,112 @@
+{
+  "projectType": "saas",
+  "projectName": "pInk",
+  "projectDescription": "A modern comic book catalog system for browsing, searching, and discovering comic books with an intuitive interface.",
+  "theme": "almond",
+  "primaryColor": "#E91E63",
+  "lightColor": "#F8BBD0",
+  "darkColor": "#AD1457",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Get Started",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "introduction",
+              "features"
+            ]
+          },
+          {
+            "group": "Setup",
+            "pages": [
+              "installation",
+              "quickstart",
+              "configuration"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Features",
+        "groups": [
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/browsing",
+              "features/filtering",
+              "features/comic-details"
+            ]
+          },
+          {
+            "group": "Architecture",
+            "pages": [
+              "architecture/overview",
+              "architecture/frontend",
+              "architecture/backend",
+              "architecture/database"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "api/overview",
+              "api/authentication"
+            ]
+          },
+          {
+            "group": "Endpoints",
+            "pages": [
+              "api/comics",
+              "api/issues",
+              "api/health"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Development",
+        "groups": [
+          {
+            "group": "Setup",
+            "pages": [
+              "development/database-setup",
+              "development/environment"
+            ]
+          },
+          {
+            "group": "Deployment",
+            "pages": [
+              "development/deployment",
+              "development/troubleshooting"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Clean and intuitive interface for browsing comic books",
+    "Advanced filtering by publisher, language, and year",
+    "Detailed comic metadata including authors, synopsis, and covers",
+    "RESTful API built with ElysiaJS and Bun for high performance",
+    "React-based frontend with responsive design",
+    "Supabase integration for scalable PostgreSQL database",
+    "SEO-optimized pages with dynamic metadata",
+    "Swagger API documentation in development mode"
+  ],
+  "publicApiSurface": [
+    "GET /api/comics - Get all comics",
+    "GET /api/comics/:id - Get comic by ID or slug",
+    "GET /api/comics/:id/issues - Get all issues for a comic",
+    "GET /api/issues - Get all issues with pagination",
+    "GET /api/issues/:id - Get issue by ID",
+    "GET /health - Health check endpoint"
+  ]
+}
