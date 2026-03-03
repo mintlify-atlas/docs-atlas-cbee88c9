@@ -1,0 +1,162 @@
+---
+title: "Database Setup"
+description: "Set up Supabase database and create required tables for pInk"
+icon: "database"
+---
+
+## Overview
+
+pInk uses Supabase as its PostgreSQL database. This guide walks you through creating your Supabase project and setting up the required database schema.
+
+<Steps>
+  <Step title="Create Supabase Project">
+    1. Go to [supabase.com](https://supabase.com) and sign in or create an account
+    2. Click "New Project"
+    3. Enter your project details:
+       - **Project Name**: Choose a name for your project (e.g., "pink-comics")
+       - **Database Password**: Create a strong password
+       - **Region**: Select the region closest to your users
+    4. Click "Create new project" and wait for setup to complete
+  </Step>
+
+  <Step title="Get Connection Credentials">
+    Once your project is ready:
+    
+    1. Navigate to **Settings** > **API** in the Supabase dashboard
+    2. Copy the following values:
+       - **Project URL** (starts with `https://...supabase.co`)
+       - **anon/public key** (under "Project API keys")
+    
+    Save these values - you'll need them for environment configuration.
+  </Step>
+
+  <Step title="Create Database Tables">
+    pInk requires six tables with specific relationships. Navigate to the **SQL Editor** in your Supabase dashboard and run the following schema:
+
+    ### Core Tables
+
+    ```sql
+    -- Idiom table (Languages)
+    CREATE TABLE "Idiom" (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(100) NOT NULL UNIQUE
+    );
+
+    -- Publisher table
+    CREATE TABLE "Publisher" (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) NOT NULL UNIQUE
+    );
+
+    -- Author table
+    CREATE TABLE "Author" (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      bio TEXT,
+      avatar VARCHAR(500)
+    );
+
+    -- Comic table (main comics catalog)
+    CREATE TABLE "Comic" (
+      id SERIAL PRIMARY KEY,
+      title VARCHAR(255) NOT NULL,
+      issues INTEGER NOT NULL DEFAULT 1,
+      year INTEGER NOT NULL,
+      cover VARCHAR(500),
+      "idiomId" INTEGER REFERENCES "Idiom"(id) ON DELETE SET NULL,
+      "publisherId" INTEGER REFERENCES "Publisher"(id) ON DELETE SET NULL
+    );
+
+    -- Issue table (individual comic issues)
+    CREATE TABLE "Issue" (
+      id SERIAL PRIMARY KEY,
+      title VARCHAR(255) NOT NULL,
+      "issueNumber" INTEGER NOT NULL,
+      year INTEGER,
+      size VARCHAR(50),
+      series VARCHAR(255),
+      genres TEXT,
+      link VARCHAR(500),
+      cover VARCHAR(500),
+      synopsis TEXT,
+      "comicId" INTEGER NOT NULL REFERENCES "Comic"(id) ON DELETE CASCADE,
+      "idiomId" INTEGER REFERENCES "Idiom"(id) ON DELETE SET NULL,
+      credito VARCHAR(255),
+      "creditoLink" VARCHAR(500)
+    );
+
+    -- ComicAuthor junction table (many-to-many relationship)
+    CREATE TABLE "ComicAuthor" (
+      id SERIAL PRIMARY KEY,
+      "comicId" INTEGER NOT NULL REFERENCES "Comic"(id) ON DELETE CASCADE,
+      "authorId" INTEGER NOT NULL REFERENCES "Author"(id) ON DELETE CASCADE,
+      UNIQUE("comicId", "authorId")
+    );
+    ```
+
+    ### Insert Sample Languages
+
+    ```sql
+    INSERT INTO "Idiom" (name) VALUES 
+      ('Português'),
+      ('Inglês'),
+      ('Espanhol'),
+      ('Francês')
+    ON CONFLICT (name) DO NOTHING;
+    ```
+  </Step>
+
+  <Step title="Verify Table Relationships">
+    The schema creates the following relationships:
+
+    - **Comic** → **Idiom**: Each comic has one language (`idiomId`)
+    - **Comic** → **Publisher**: Each comic has one publisher (`publisherId`)
+    - **Issue** → **Comic**: Each issue belongs to one comic (`comicId`)
+    - **Issue** → **Idiom**: Each issue has one language (`idiomId`)
+    - **Comic** ↔ **Author**: Many-to-many through `ComicAuthor` junction table
+
+    These relationships are used throughout the API controllers:
+    - `src/server/controllers/comicsController.ts:9-19` - Comic queries with joins
+    - `src/server/controllers/comicsController.ts:105-108` - Author relationships
+    - `src/server/controllers/issuesController.ts:9` - Issue queries with joins
+  </Step>
+
+  <Step title="Test Database Connection">
+    pInk includes a built-in connection test function. After setting up your environment variables (see [Environment Setup](/development/environment)), start the server:
+
+    ```bash
+    bun run server
+    ```
+
+    You should see output from `src/server/config/database.ts:26-48`:
+
+    ```
+    🔍 Testing Supabase connection...
+    🔗 Connecting to: https://your-project.supabase.co
+    ✅ Supabase connection SUCCESSFUL!
+    📊 Database test: Found 0 comics in database
+    🌍 Environment: development
+    🚀 Database ready for API requests!
+    ```
+
+    If the connection fails, see [Troubleshooting](/development/troubleshooting) for common issues.
+  </Step>
+</Steps>
+
+## Optional: Seed Sample Data
+
+Use the SQL templates in your source code to add sample data:
+
+- `docs/sql-templates/comics-template.sql` - Template for adding comics
+- `docs/sql-templates/issues-template.sql` - Template for adding issues
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Environment Setup" icon="gear" href="/development/environment">
+    Configure environment variables for local development
+  </Card>
+  <Card title="Troubleshooting" icon="wrench" href="/development/troubleshooting">
+    Resolve common database connection issues
+  </Card>
+</CardGroup>

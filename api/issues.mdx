@@ -1,0 +1,322 @@
+---
+title: Issues Endpoints
+description: API endpoints for retrieving comic book issue information
+---
+
+## List All Issues
+
+Retrieve a paginated list of all issues in the catalog.
+
+```bash
+GET /api/issues
+```
+
+### Query Parameters
+
+<ParamField query="limit" type="number" default="50">
+  Maximum number of issues to return per request (default: 50)
+</ParamField>
+
+<ParamField query="offset" type="number" default="0">
+  Number of issues to skip for pagination (default: 0)
+</ParamField>
+
+<ParamField query="search" type="string">
+  Search term to filter issues by title (case-insensitive partial match)
+</ParamField>
+
+### Example Requests
+
+```bash
+# Get first 50 issues (default)
+curl http://localhost:3000/api/issues
+
+# Get 10 issues starting from offset 20
+curl "http://localhost:3000/api/issues?limit=10&offset=20"
+
+# Search for issues with "Spider-Man" in the title
+curl "http://localhost:3000/api/issues?search=Spider-Man"
+
+# Combine search and pagination
+curl "http://localhost:3000/api/issues?search=Batman&limit=25&offset=0"
+```
+
+### Response
+
+<ResponseField name="success" type="boolean" required>
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="count" type="number" required>
+  Number of issues returned in this response
+</ResponseField>
+
+<ResponseField name="total" type="number" required>
+  Total number of issues matching the query (including those not returned due to pagination)
+</ResponseField>
+
+<ResponseField name="pagination" type="object" required>
+  Pagination information
+  
+  <ResponseField name="limit" type="number">
+    Limit used for this request
+  </ResponseField>
+  
+  <ResponseField name="offset" type="number">
+    Offset used for this request
+  </ResponseField>
+  
+  <ResponseField name="has_more" type="boolean">
+    Whether there are more results available
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="data" type="array" required>
+  Array of issue objects
+  
+  <ResponseField name="id" type="number">
+    Unique issue identifier
+  </ResponseField>
+  
+  <ResponseField name="title" type="string">
+    Issue title
+  </ResponseField>
+  
+  <ResponseField name="issueNumber" type="number">
+    Issue number in the series
+  </ResponseField>
+  
+  <ResponseField name="year" type="number">
+    Publication year
+  </ResponseField>
+  
+  <ResponseField name="cover" type="string">
+    Cover image URL
+  </ResponseField>
+  
+  <ResponseField name="comicId" type="number">
+    ID of the parent comic
+  </ResponseField>
+  
+  <ResponseField name="comic_title" type="string | null">
+    Title of the parent comic
+  </ResponseField>
+  
+  <ResponseField name="language" type="string | null">
+    Issue language
+  </ResponseField>
+  
+  <ResponseField name="credito" type="string | null">
+    Credit information
+  </ResponseField>
+  
+  <ResponseField name="creditoLink" type="string | null">
+    Link to credit source
+  </ResponseField>
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "count": 10,
+  "total": 150,
+  "pagination": {
+    "limit": 10,
+    "offset": 0,
+    "has_more": true
+  },
+  "data": [
+    {
+      "id": 101,
+      "title": "The Amazing Spider-Man #1",
+      "issueNumber": 1,
+      "year": 1963,
+      "cover": "https://example.com/cover.jpg",
+      "comicId": 1,
+      "comic_title": "The Amazing Spider-Man",
+      "language": "English",
+      "credito": "Marvel Database",
+      "creditoLink": "https://marvel.fandom.com"
+    }
+  ]
+}
+```
+
+Issues are ordered by issue number (ascending).
+
+### Pagination Example
+
+To iterate through all issues:
+
+```bash
+# First page
+curl "http://localhost:3000/api/issues?limit=50&offset=0"
+
+# Second page
+curl "http://localhost:3000/api/issues?limit=50&offset=50"
+
+# Third page
+curl "http://localhost:3000/api/issues?limit=50&offset=100"
+```
+
+Check the `pagination.has_more` field to determine if there are more results.
+
+---
+
+## Get Issue by ID
+
+Retrieve detailed information about a specific issue.
+
+```bash
+GET /api/issues/:id
+```
+
+### Path Parameters
+
+<ParamField path="id" type="number" required>
+  Issue identifier (numeric ID only)
+</ParamField>
+
+### Example Request
+
+```bash
+curl http://localhost:3000/api/issues/101
+```
+
+### Response
+
+<ResponseField name="success" type="boolean" required>
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="object" required>
+  Issue object with complete details
+  
+  <ResponseField name="id" type="number">
+    Issue identifier
+  </ResponseField>
+  
+  <ResponseField name="title" type="string">
+    Issue title
+  </ResponseField>
+  
+  <ResponseField name="issueNumber" type="number">
+    Issue number in the series
+  </ResponseField>
+  
+  <ResponseField name="year" type="number">
+    Publication year
+  </ResponseField>
+  
+  <ResponseField name="size" type="string">
+    File size or page count
+  </ResponseField>
+  
+  <ResponseField name="series" type="string">
+    Series information
+  </ResponseField>
+  
+  <ResponseField name="genres" type="array">
+    Array of genre tags (automatically parsed from JSON string if needed)
+  </ResponseField>
+  
+  <ResponseField name="link" type="string">
+    Download or reference link
+  </ResponseField>
+  
+  <ResponseField name="cover" type="string">
+    Cover image URL
+  </ResponseField>
+  
+  <ResponseField name="synopsis" type="string">
+    Issue synopsis/description
+  </ResponseField>
+  
+  <ResponseField name="comicId" type="number">
+    Parent comic ID
+  </ResponseField>
+  
+  <ResponseField name="language" type="string | null">
+    Issue language
+  </ResponseField>
+  
+  <ResponseField name="comic_title" type="string | null">
+    Parent comic title
+  </ResponseField>
+  
+  <ResponseField name="comic_year" type="number | null">
+    Parent comic publication year
+  </ResponseField>
+  
+  <ResponseField name="publisher" type="string | null">
+    Publisher name
+  </ResponseField>
+  
+  <ResponseField name="authors" type="array">
+    Array of author objects (from the parent comic)
+  </ResponseField>
+  
+  <ResponseField name="credito" type="string">
+    Credit information
+  </ResponseField>
+  
+  <ResponseField name="creditoLink" type="string">
+    Link to credit source
+  </ResponseField>
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 101,
+    "title": "The Amazing Spider-Man #1",
+    "issueNumber": 1,
+    "year": 1963,
+    "size": "22 pages",
+    "series": "Volume 1",
+    "genres": ["Superhero", "Action", "Adventure"],
+    "link": "https://example.com/issue.cbr",
+    "cover": "https://example.com/cover.jpg",
+    "synopsis": "Peter Parker gets bitten by a radioactive spider...",
+    "comicId": 1,
+    "language": "English",
+    "comic_title": "The Amazing Spider-Man",
+    "comic_year": 1963,
+    "publisher": "Marvel Comics",
+    "authors": [
+      {
+        "id": 1,
+        "name": "Stan Lee"
+      },
+      {
+        "id": 2,
+        "name": "Steve Ditko"
+      }
+    ],
+    "credito": "Marvel Database",
+    "creditoLink": "https://marvel.fandom.com"
+  }
+}
+```
+
+### Genre Parsing
+
+The `genres` field is automatically parsed from either:
+- JSON array format: `["Superhero", "Action"]`
+- Comma-separated string: `"Superhero, Action"`
+
+Both formats are normalized to return an array of strings.
+
+### Error Response
+
+```json
+{
+  "success": false,
+  "message": "Issue not found"
+}
+```

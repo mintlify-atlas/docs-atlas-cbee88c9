@@ -1,0 +1,402 @@
+---
+title: "Troubleshooting"
+description: "Common issues and solutions for pInk development and deployment"
+icon: "wrench"
+---
+
+## Common Issues
+
+<AccordionGroup>
+  <Accordion title="Missing environment variables warning" icon="triangle-exclamation">
+    **Error Message** (from `src/server/config/database.ts:11-13`):
+    
+    ```
+    ⚠️ Warning: SUPABASE_URL or SUPABASE_ANON_KEY is missing in process.env
+    ```
+
+    **Cause**:
+    Your `.env` file is missing or doesn't contain required Supabase credentials.
+
+    **Solution** (from `src/server/config/database.ts:55-57`):
+    
+    1. Create a `.env` file in your project root:
+       ```bash
+       cp .env.example .env
+       ```
+    
+    2. Add your Supabase credentials:
+       ```bash
+       SUPABASE_URL=https://your-project-ref.supabase.co
+       SUPABASE_ANON_KEY=your_supabase_anon_key_here
+       ```
+    
+    3. Restart the server:
+       ```bash
+       bun run server
+       ```
+
+    See [Environment Setup](/development/environment) for detailed configuration.
+  </Accordion>
+
+  <Accordion title="Supabase connection failed" icon="database">
+    **Error Message** (from `src/server/config/database.ts:51-52`):
+    
+    ```
+    ❌ Supabase connection FAILED!
+    💥 Error: Supabase query failed: ...
+    ⚠️  Server will continue but API endpoints will not work
+    ```
+
+    **Common Causes & Solutions**:
+
+    ### Invalid API Key
+    
+    Error includes: `Invalid API key` (handled in `src/server/config/database.ts:58-59`)
+    
+    ```
+    🔐 Solution: Verify your SUPABASE_ANON_KEY is correct
+    ```
+    
+    **Fix**:
+    1. Go to Supabase Dashboard → Settings → API
+    2. Copy the **anon/public** key (NOT the service_role key)
+    3. Update your `.env` file with the correct key
+    4. Restart the server
+
+    ### Invalid URL
+    
+    Error includes network or connection errors (handled in `src/server/config/database.ts:68-70`)
+    
+    ```
+    🌐 Solution: Verify your SUPABASE_URL and network connection
+    ```
+    
+    **Fix**:
+    1. Check your `SUPABASE_URL` format: `https://PROJECT_ID.supabase.co`
+    2. Verify your internet connection
+    3. Check if Supabase is experiencing downtime: [status.supabase.com](https://status.supabase.com)
+
+    ### Missing Tables
+    
+    Error includes: `relation "Comic" does not exist` (handled in `src/server/config/database.ts:60-66`)
+    
+    ```
+    📋 Solution: Check if your database tables exist (Idiom, Comic, Issue, etc.)
+    ```
+    
+    **Fix**:
+    1. The database connection test queries the `Comic` table (`src/server/config/database.ts:32-35`)
+    2. Follow the [Database Setup](/development/database-setup) guide to create required tables
+    3. Verify tables exist in Supabase Dashboard → Table Editor
+  </Accordion>
+
+  <Accordion title="CORS errors in browser" icon="globe">
+    **Error Message** (browser console):
+    
+    ```
+    Access to fetch at 'http://localhost:3000/api/comics' from origin 'http://localhost:5173' 
+    has been blocked by CORS policy
+    ```
+
+    **Cause**:
+    CORS is not properly configured or the CORS middleware is missing.
+
+    **Solution**:
+    
+    pInk uses `@elysiajs/cors` middleware (`src/server/index.ts:2,12`):
+    
+    ```typescript
+    import { cors } from "@elysiajs/cors";
+    
+    const app = new Elysia()
+      .use(cors())
+      // ...
+    ```
+    
+    **Verify CORS is enabled**:
+    1. Check that `@elysiajs/cors` is installed:
+       ```bash
+       bun install @elysiajs/cors
+       ```
+    
+    2. Restart the server:
+       ```bash
+       bun run server
+       ```
+    
+    3. The default CORS configuration allows all origins in development
+
+    **Production CORS**:
+    For production deployments, configure allowed origins in `src/server/index.ts`:
+    ```typescript
+    .use(cors({
+      origin: ['https://yourdomain.com', 'https://www.yourdomain.com']
+    }))
+    ```
+  </Accordion>
+
+  <Accordion title="Port already in use" icon="network-wired">
+    **Error Message**:
+    
+    ```
+    Error: listen EADDRINUSE: address already in use :::3000
+    ❌ Failed to start server
+    ```
+
+    **Cause**:
+    Another process is using port 3000 (default port from `src/server/index.ts:9`).
+
+    **Solutions**:
+
+    ### Option 1: Use a Different Port
+    
+    Set the `PORT` environment variable in your `.env` file:
+    ```bash
+    PORT=3001
+    ```
+    
+    Then restart:
+    ```bash
+    bun run server
+    ```
+
+    ### Option 2: Kill the Existing Process
+    
+    **On macOS/Linux**:
+    ```bash
+    # Find the process using port 3000
+    lsof -ti:3000
+    
+    # Kill the process
+    kill -9 $(lsof -ti:3000)
+    ```
+    
+    **On Windows**:
+    ```bash
+    # Find the process
+    netstat -ano | findstr :3000
+    
+    # Kill the process (replace PID with actual process ID)
+    taskkill /PID <PID> /F
+    ```
+  </Accordion>
+
+  <Accordion title="404 Not Found on API endpoints" icon="magnifying-glass">
+    **Error Response**:
+    
+    ```json
+    {
+      "success": false,
+      "message": "Comic not found"
+    }
+    ```
+
+    **Cause**:
+    The requested resource doesn't exist or the ID/slug is incorrect.
+
+    **Solutions**:
+
+    ### Verify Resource Exists
+    
+    Check if the comic/issue exists in your database:
+    ```bash
+    curl http://localhost:3000/api/comics
+    ```
+
+    ### Check ID Format
+    
+    The API supports multiple ID formats (`src/server/controllers/comicsController.ts:48-84`):
+    
+    1. **Numeric ID**: `/api/comics/123`
+    2. **Title-Year slug**: `/api/comics/batman-year-one-1987`
+    3. **Title slug**: `/api/comics/batman-year-one`
+    
+    Ensure your request matches one of these formats.
+
+    ### Error Handling
+    
+    The API returns 404 for not found errors (`src/server/index.ts:45-57`):
+    
+    ```typescript
+    .onError(({ code, error, set }) => {
+      const message = error instanceof Error ? error.message : String(error);
+      const isNotFound = code === "NOT_FOUND" || message.startsWith("NOT_FOUND:");
+      
+      if (isNotFound) {
+        set.status = 404;
+        return {
+          success: false,
+          message: message.replace("NOT_FOUND: ", ""),
+        };
+      }
+      // ...
+    })
+    ```
+  </Accordion>
+
+  <Accordion title="Vercel deployment fails" icon="rocket">
+    **Common Build Errors**:
+
+    ### Missing Environment Variables
+    
+    **Error**: API requests fail in production
+    
+    **Solution**:
+    1. Go to Vercel Dashboard → Your Project → Settings → Environment Variables
+    2. Add `SUPABASE_URL` and `SUPABASE_ANON_KEY`
+    3. Redeploy:
+       ```bash
+       vercel --prod
+       ```
+
+    ### Build Command Failed
+    
+    **Error**: `vite build` fails
+    
+    **Solution**:
+    1. Test the build locally:
+       ```bash
+       bun run build
+       ```
+    2. Fix any TypeScript or import errors
+    3. Push changes and redeploy
+
+    ### Serverless Function Timeout
+    
+    **Error**: Function execution timeout
+    
+    **Cause**: Database query takes too long
+    
+    **Solution**:
+    1. Check database indexes in Supabase
+    2. Optimize queries in controllers
+    3. Increase timeout in Vercel settings (Pro plan required)
+  </Accordion>
+
+  <Accordion title="Bun runtime errors" icon="terminal">
+    **Error Message**:
+    
+    ```
+    error: Cannot find module "@supabase/supabase-js"
+    ```
+
+    **Cause**:
+    Dependencies are not installed.
+
+    **Solution**:
+    
+    ```bash
+    # Install dependencies
+    bun install
+    
+    # Clear cache and reinstall if issues persist
+    rm -rf node_modules bun.lock
+    bun install
+    ```
+
+    ### Bun Version Issues
+    
+    **Error**: Compatibility errors with Bun
+    
+    **Solution**:
+    
+    Ensure you're using Bun 1.x (specified in `vercel.json:4`):
+    ```bash
+    # Check version
+    bun --version
+    
+    # Upgrade if needed
+    curl -fsSL https://bun.sh/install | bash
+    ```
+  </Accordion>
+
+  <Accordion title="Swagger documentation not showing" icon="book">
+    **Issue**: `/swagger` endpoint returns 404
+
+    **Cause**:
+    Swagger is only enabled in development mode (`src/server/index.ts:13-15`).
+
+    ```typescript
+    .use((app) =>
+      process.env.NODE_ENV === "development" ? app.use(swagger()) : app,
+    )
+    ```
+
+    **Solution**:
+    
+    1. Set `NODE_ENV=development` in your `.env` file:
+       ```bash
+       NODE_ENV=development
+       ```
+    
+    2. Restart the server:
+       ```bash
+       bun run server
+       ```
+    
+    3. Access Swagger at: `http://localhost:3000/swagger`
+
+    <Info>
+      Swagger is intentionally disabled in production to reduce bundle size and prevent API documentation exposure.
+    </Info>
+  </Accordion>
+</AccordionGroup>
+
+## Debugging Tips
+
+### Enable Detailed Logging
+
+The server includes detailed logging throughout (`src/server/config/database.ts:27-48`):
+
+```typescript
+console.log("🔍 Testing Supabase connection...");
+console.log(`🔗 Connecting to: ${SUPABASE_URL}`);
+console.log("✅ Supabase connection SUCCESSFUL!");
+console.log(`📊 Database test: Found ${count} comics in database`);
+console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
+```
+
+### Check Server Health
+
+Use the health endpoint to verify the server is running:
+
+```bash
+curl http://localhost:3000/health
+```
+
+Expected response (`src/server/index.ts:16-20`):
+```json
+{
+  "status": "OK",
+  "timestamp": "2026-03-03T14:30:00.000Z",
+  "version": "2.4.1"
+}
+```
+
+### Test Database Connection
+
+The connection test runs automatically on server start and queries the Comic table (`src/server/config/database.ts:32-35`):
+
+```typescript
+const { data, error, count } = await supabase
+  .from("Comic")
+  .select("*", { count: "exact" })
+  .limit(1);
+```
+
+## Still Having Issues?
+
+<CardGroup cols={2}>
+  <Card title="Database Setup" icon="database" href="/development/database-setup">
+    Review database configuration and schema
+  </Card>
+  <Card title="Environment Variables" icon="gear" href="/development/environment">
+    Check environment variable configuration
+  </Card>
+  <Card title="Deployment Guide" icon="rocket" href="/development/deployment">
+    Review deployment process and settings
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/comics">
+    Test API endpoints directly
+  </Card>
+</CardGroup>

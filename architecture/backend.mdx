@@ -1,0 +1,505 @@
+---
+title: 'Backend Architecture'
+description: 'ElysiaJS + Bun backend structure, API routes, and controllers'
+icon: 'server'
+---
+
+## Overview
+
+The pInk backend is built with ElysiaJS running on Bun, providing a fast and type-safe REST API.
+
+## Server Setup
+
+### ElysiaJS Application
+
+The main server file is `src/server/index.ts:11`:
+
+```typescript index.ts
+import { Elysia } from "elysia";
+import { cors } from "@elysiajs/cors";
+import { swagger } from "@elysiajs/swagger";
+import { testConnection } from "./config/database";
+import { comicsController } from "./controllers/comicsController";
+import { issuesController } from "./controllers/issuesController";
+
+const PORT = process.env.PORT || 3000;
+
+const app = new Elysia()
+  .use(cors())
+  .use((app) =>
+    process.env.NODE_ENV === "development" ? app.use(swagger()) : app,
+  )
+  .get("/health", () => ({
+    status: "OK",
+    timestamp: new Date().toISOString(),
+    version: APP_VERSION,
+  }))
+  .group("/api", (app) =>
+    app
+      .group("/comics", (app) =>
+        app
+          .get("/", () => comicsController.getAllComics())
+          .get("/:id", comicsController.getComicById)
+          .get("/:id/issues", comicsController.getComicIssues),
+      )
+      .group("/issues", (app) =>
+        app
+          .get("/", issuesController.getAllIssues)
+          .get("/:id", issuesController.getIssueById),
+      ),
+  )
+  .get("/", () => ({
+    name: `pInk API`,
+    description: "Catálogo de quadrinhos",
+    version: APP_VERSION,
+    endpoints: {
+      health: "/health",
+      comics: "/api/comics",
+      issues: "/api/issues",
+    },
+  }));
+```
+
+### Middleware Stack
+
+<Steps>
+  <Step title="CORS">
+    Enables cross-origin requests for frontend access
+    ```typescript
+    .use(cors())
+    ```
+  </Step>
+  <Step title="Swagger (Dev Only)">
+    Auto-generates API documentation in development
+    ```typescript
+    .use((app) =>
+      process.env.NODE_ENV === "development" ? app.use(swagger()) : app
+    )
+    ```
+  </Step>
+</Steps>
+
+## API Routes
+
+### Route Structure
+
+```
+GET  /                      # API info
+GET  /health                # Health check
+GET  /api/comics            # List all comics
+GET  /api/comics/:id        # Get comic by ID/slug
+GET  /api/comics/:id/issues # Get issues for comic
+GET  /api/issues            # List all issues (paginated)
+GET  /api/issues/:id        # Get issue by ID
+```
+
+### Health Endpoint
+
+Provides server status and version:
+
+```typescript
+.get("/health", () => ({
+  status: "OK",
+  timestamp: new Date().toISOString(),
+  version: APP_VERSION,
+}))
+```
+
+### Route Groups
+
+ElysiaJS groups organize related routes:
+
+```typescript
+.group("/api", (app) =>
+  app
+    .group("/comics", (app) => /* comic routes */)
+    .group("/issues", (app) => /* issue routes */)
+)
+```
+
+## Controllers
+
+### Comics Controller
+
+The `comicsController` (src/server/controllers/comicsController.ts:4) handles comic-related operations:
+
+#### Get All Comics
+
+```typescript comicsController.ts
+async getAllComics() {
+  try {
+    const { data, error } = await supabase
+      .from("Comic")
+      .select(
+        `
+        id, 
+        title, 
+        issues, 
+        year, 
+        cover, 
+        idiomId, 
+        publisherId,
+        Idiom(name),
+        Publisher(name)
+      `,
+      )
+      .order("title", { ascending: true })
+      .order("year", { ascending: true });
+
+    if (error) throw error;
+
+    const comics = (data as any[]).map((comic) => ({
+      id: comic.id,
+      title: comic.title,
+      total_issues: comic.issues,
+      year: comic.year,
+      cover: comic.cover,
+      language: comic.Idiom?.name || null,
+      publisher: comic.Publisher?.name || null,
+    }));
+
+    return {
+      success: true,
+      count: comics.length,
+      data: comics,
+    };
+  } catch (error: any) {
+    console.error("Error fetching comics:", error);
+    throw new Error(error.message || "Error fetching comics");
+  }
+}
+```
+
+#### Get Comic by ID/Slug
+
+Supports multiple ID formats (src/server/controllers/comicsController.ts:48):
+
+<Tabs>
+  <Tab title="Numeric ID">
+    ```
+    /api/comics/123
+    ```
+  </Tab>
+  <Tab title="Slug + Year">
+    ```
+    /api/comics/batman-2016
+    ```
+  </Tab>
+  <Tab title="Slug + ID">
+    ```
+    /api/comics/batman-123
+    ```
+  </Tab>
+  <Tab title="Slug Only">
+    ```
+    /api/comics/batman
+    ```
+  </Tab>
+</Tabs>
+
+```typescript comicsController.ts
+async getComicById({ params }: { params: Record<string, string> }) {
+  const { id: paramId } = params;
+  try {
+    let numericId: number | null = parseInt(paramId);
+
+    // If not a number, try slug matching
+    if (isNaN(numericId)) {
+      const yearMatch = paramId.match(/^(.*)-(\d{4})$/);
+      const idMatch = paramId.match(/^(.*)-(\d+)$/);
+
+      const { data: allComics } = await supabase
+        .from("Comic")
+        .select("id, title, year");
+
+      let matchingComic;
+
+      // Try title-year format
+      if (yearMatch) {
+        const titleSlug = yearMatch[1];
+        const year = parseInt(yearMatch[2]);
+        matchingComic = allComics.find(
+          (c) => slugify(c.title) === titleSlug && c.year === year,
+        );
+      }
+
+      // Try title-id format
+      if (!matchingComic && idMatch) {
+        const id = parseInt(idMatch[2]);
+        matchingComic = allComics.find((c) => c.id === id);
+      }
+
+      // Try slug only
+      if (!matchingComic) {
+        matchingComic = allComics.find((c) => slugify(c.title) === paramId);
+      }
+
+      if (!matchingComic) throw new Error("NOT_FOUND: Comic not found");
+      numericId = matchingComic.id;
+    }
+
+    // Fetch full comic data
+    const { data, error } = await supabase
+      .from("Comic")
+      .select(`*, Idiom(name), Publisher(name)`)
+      .eq("id", numericId)
+      .single();
+
+    if (error) throw error;
+
+    // Fetch authors
+    const { data: authorsData } = await supabase
+      .from("ComicAuthor")
+      .select("Author(*)")
+      .eq("comicId", numericId);
+
+    return {
+      success: true,
+      data: {
+        id: data.id,
+        title: data.title,
+        total_issues: data.issues,
+        year: data.year,
+        cover: data.cover,
+        language: data.Idiom?.name || null,
+        publisher: data.Publisher?.name || null,
+        authors: authorsData?.map((ca) => ca.Author) || [],
+      },
+    };
+  } catch (error: any) {
+    throw error;
+  }
+}
+```
+
+### Issues Controller
+
+The `issuesController` (src/server/controllers/issuesController.ts:3) handles issue operations:
+
+#### Get Issue by ID
+
+```typescript issuesController.ts
+async getIssueById({ params }: { params: Record<string, string> }) {
+  const { id } = params;
+  try {
+    const { data, error } = await supabase
+      .from("Issue")
+      .select("*, Idiom(name), Comic(*, Publisher(name))")
+      .eq("id", id)
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST116") {
+        throw new Error("Issue not found");
+      }
+      throw error;
+    }
+
+    // Fetch authors
+    const { data: authorsData } = await supabase
+      .from("ComicAuthor")
+      .select("Author(*)")
+      .eq("comicId", data.comicId);
+
+    // Parse genres if string
+    let genres = data.genres;
+    if (typeof genres === "string") {
+      try {
+        genres = JSON.parse(genres);
+      } catch (e) {
+        genres = genres.split(",").map((g: string) => g.trim());
+      }
+    }
+
+    return {
+      success: true,
+      data: {
+        id: data.id,
+        title: data.title,
+        issueNumber: data.issueNumber,
+        year: data.year,
+        size: data.size,
+        series: data.series,
+        genres: genres,
+        link: data.link,
+        cover: data.cover,
+        synopsis: data.synopsis,
+        language: data.Idiom?.name || null,
+        comic_title: data.Comic?.title || null,
+        publisher: data.Comic?.Publisher?.name || null,
+        authors: authorsData?.map((ca) => ca.Author) || [],
+        credito: data.credito,
+        creditoLink: data.creditoLink,
+      },
+    };
+  } catch (error: any) {
+    throw new Error(error.message || "Error fetching issue details");
+  }
+}
+```
+
+#### Get All Issues (Paginated)
+
+```typescript issuesController.ts
+async getAllIssues({
+  query,
+}: {
+  query: { limit?: string; offset?: string; search?: string };
+}) {
+  try {
+    const limit = parseInt(query.limit || "50");
+    const offset = parseInt(query.offset || "0");
+    const search = query.search;
+
+    let supabaseQuery = supabase
+      .from("Issue")
+      .select("*, Idiom(name), Comic(title)", { count: "exact" });
+
+    if (search) {
+      supabaseQuery = supabaseQuery.ilike("title", `%${search}%`);
+    }
+
+    const { data, error, count } = await supabaseQuery
+      .order("issueNumber", { ascending: true })
+      .range(offset, offset + limit - 1);
+
+    if (error) throw error;
+
+    return {
+      success: true,
+      count: data.length,
+      total: count,
+      pagination: {
+        limit,
+        offset,
+        has_more: offset + data.length < (count || 0),
+      },
+      data: /* transformed issues */,
+    };
+  } catch (error: any) {
+    throw new Error(error.message || "Error fetching issues");
+  }
+}
+```
+
+## Error Handling
+
+Global error handler catches all errors (src/server/index.ts:45):
+
+```typescript index.ts
+.onError(({ code, error, set }) => {
+  console.error(`❌ Error (${code}):`, error);
+
+  const message = error instanceof Error ? error.message : String(error);
+  const isNotFound = code === "NOT_FOUND" || message.startsWith("NOT_FOUND:");
+
+  if (isNotFound) {
+    set.status = 404;
+    return {
+      success: false,
+      message: message.replace("NOT_FOUND: ", ""),
+    };
+  }
+
+  set.status = 500;
+  return {
+    success: false,
+    message: message || "Internal server error",
+  };
+});
+```
+
+<Warning>
+  Controllers throw errors with "NOT_FOUND:" prefix for 404 responses. All other errors return 500.
+</Warning>
+
+## Server Startup
+
+The server starts with database connection test (src/server/index.ts:69):
+
+```typescript index.ts
+async function start() {
+  await testConnection();
+  app.listen(PORT);
+  console.log(`🚀 pInk server running on http://localhost:${PORT}`);
+}
+
+if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
+  start().catch((err) => {
+    console.error("❌ Failed to start server:", err);
+    process.exit(1);
+  });
+}
+```
+
+<Note>
+  The server only auto-starts in non-production environments. On Vercel, it runs as a serverless function.
+</Note>
+
+## Type Definitions
+
+Server types are defined in `src/server/types/index.ts:1`:
+
+```typescript types/index.ts
+export interface Idiom {
+  id: number;
+  name: string;
+}
+
+export interface Publisher {
+  id: number;
+  name: string;
+}
+
+export interface Author {
+  id: number;
+  name: string;
+  bio?: string;
+  avatar?: string;
+}
+
+export interface Comic {
+  id: number;
+  title: string;
+  issues: number;
+  year: number;
+  cover: string;
+  publisherId: number;
+  idiomId: number;
+  Publisher?: Publisher;
+  Idiom?: Idiom;
+}
+
+export interface Issue {
+  id: number;
+  title: string;
+  issueNumber: number;
+  year: number;
+  size: string;
+  series: string;
+  genres: string | string[];
+  link: string;
+  cover: string;
+  synopsis: string;
+  comicId: number;
+  idiomId: number;
+  credito?: string;
+  creditoLink?: string;
+}
+```
+
+## Swagger Documentation
+
+In development mode, Swagger UI is available at `/swagger` for API exploration.
+
+## Vercel Serverless
+
+The `api/index.ts` file exports the Elysia app for Vercel:
+
+```typescript api/index.ts
+export { app } from "../src/server/index";
+```
+
+<Info>
+  ElysiaJS automatically adapts to serverless environments like Vercel Edge Functions.
+</Info>

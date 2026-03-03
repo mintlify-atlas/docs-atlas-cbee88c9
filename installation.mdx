@@ -1,0 +1,295 @@
+---
+title: Installation
+description: Step-by-step guide to installing pInk and its dependencies
+---
+
+## Prerequisites
+
+Before installing pInk, ensure you have the following installed on your system:
+
+<CardGroup cols={2}>
+  <Card title="Bun" icon="download">
+    **Version**: Latest stable
+    
+    Bun is a fast JavaScript runtime and package manager.
+    
+    [Install Bun →](https://bun.sh)
+  </Card>
+  <Card title="Node.js" icon="node-js">
+    **Version**: 18.x or higher
+    
+    Required for compatibility with some dependencies.
+    
+    [Install Node.js →](https://nodejs.org)
+  </Card>
+  <Card title="Git" icon="git">
+    **Version**: Any recent version
+    
+    Required to clone the repository.
+    
+    [Install Git →](https://git-scm.com)
+  </Card>
+  <Card title="Supabase Account" icon="database">
+    **Account**: Free tier available
+    
+    Cloud PostgreSQL database service.
+    
+    [Sign up for Supabase →](https://supabase.com)
+  </Card>
+</CardGroup>
+
+### System Requirements
+
+| Requirement | Minimum | Recommended |
+| --- | --- | --- |
+| RAM | 2 GB | 4 GB or more |
+| Storage | 500 MB | 1 GB or more |
+| OS | macOS, Linux, WSL2 | Any |
+
+<Note>
+  Bun works best on macOS, Linux, and WSL2. Windows support is experimental.
+</Note>
+
+## Installation Steps
+
+Follow these steps to install pInk on your system:
+
+<Steps>
+  <Step title="Clone the Repository">
+    Clone the pInk repository from GitHub:
+
+    ```bash
+    git clone https://github.com/studiozweihander/pInk.git
+    cd pInk
+    ```
+
+    This downloads the complete source code and navigates into the project directory.
+  </Step>
+
+  <Step title="Install Dependencies">
+    Install all required dependencies using Bun:
+
+    ```bash
+    bun install
+    ```
+
+    This command installs all packages listed in `package.json`, including:
+
+    **Frontend Dependencies:**
+    - `react` (v19.2.3) - UI library
+    - `react-dom` (v19.2.3) - React rendering
+    - `react-router-dom` (v7.13.0) - Routing
+    - `react-helmet-async` (v2.0.5) - SEO metadata
+
+    **Backend Dependencies:**
+    - `elysia` (v1.4.19) - Web framework
+    - `@elysiajs/cors` (v1.4.0) - CORS support
+    - `@elysiajs/swagger` (v1.3.1) - API docs
+    - `@supabase/supabase-js` (v2.55.0) - Database client
+
+    **Development Dependencies:**
+    - `vite` (v7.1.2) - Build tool
+    - `@vitejs/plugin-react` (v5.1.2) - React support
+    - `typescript` (v5.9.3) - Type checking
+
+    <Tip>
+      Installation typically takes 30-60 seconds depending on your internet connection.
+    </Tip>
+  </Step>
+
+  <Step title="Set Up Supabase Project">
+    Create a new Supabase project for pInk:
+
+    1. Go to [supabase.com](https://supabase.com) and sign in
+    2. Click **New Project**
+    3. Fill in your project details:
+       - **Name**: pInk (or your preferred name)
+       - **Database Password**: Choose a strong password
+       - **Region**: Select the closest region to you
+    4. Click **Create new project**
+
+    Wait for the project to be provisioned (usually 1-2 minutes).
+
+    <Warning>
+      Save your database password securely. You'll need it if you want to connect directly to PostgreSQL.
+    </Warning>
+  </Step>
+
+  <Step title="Configure Environment Variables">
+    Create a `.env` file in the project root:
+
+    ```bash
+    cp .env.example .env
+    ```
+
+    Then edit `.env` and add your Supabase credentials:
+
+    ```bash
+    # Supabase Configuration
+    SUPABASE_URL=https://your-project-ref.supabase.co
+    SUPABASE_ANON_KEY=your_supabase_anon_key_here
+    ```
+
+    **To find your credentials:**
+
+    1. Open your Supabase project dashboard
+    2. Go to **Settings** → **API**
+    3. Copy the **Project URL** to `SUPABASE_URL`
+    4. Copy the **anon public** key to `SUPABASE_ANON_KEY`
+
+    <Note>
+      The anon key is safe to use in client-side code. It's protected by Row Level Security (RLS) policies.
+    </Note>
+  </Step>
+
+  <Step title="Set Up Database Schema">
+    You need to create the required database tables in Supabase.
+
+    pInk requires the following tables:
+    - `Comic` - Stores comic series information
+    - `Issue` - Stores individual comic issues
+    - `Publisher` - Publisher information
+    - `Idiom` - Language information
+    - `Author` - Creator information
+    - `ComicAuthor` - Relationship between comics and authors
+
+    **Option 1: Import from SQL file** (if provided)
+    ```bash
+    # In Supabase dashboard:
+    # SQL Editor → New query → Paste schema → Run
+    ```
+
+    **Option 2: Create manually**
+    See the [Database Setup Guide](/development/database-setup) for detailed schema information.
+
+    <Tip>
+      You can start with an empty database and add comics through the API or Supabase dashboard.
+    </Tip>
+  </Step>
+
+  <Step title="Verify Installation">
+    Test that everything is set up correctly:
+
+    ```bash
+    bun run server
+    ```
+
+    You should see output similar to:
+
+    ```bash
+    🔍 Testing Supabase connection...
+    🔗 Connecting to: https://your-project.supabase.co
+    ✅ Supabase connection SUCCESSFUL!
+    📊 Database test: Found 0 comics in database
+    🚀 pInk server running on http://localhost:3000
+    ```
+
+    If you see errors, check the [Troubleshooting Guide](/development/troubleshooting).
+  </Step>
+</Steps>
+
+## Package Scripts
+
+The `package.json` includes several useful scripts:
+
+| Script | Command | Description |
+| --- | --- | --- |
+| **dev** | `bun run dev` | Start frontend development server (Vite) |
+| **server** | `bun run server` | Start backend with hot-reload |
+| **start** | `bun run start` | Start backend in production mode |
+| **build** | `bun run build` | Build frontend for production |
+| **preview** | `bun run preview` | Preview production build |
+
+## Verification Checklist
+
+Before proceeding to the Quick Start, verify:
+
+<Steps>
+  <Step title="Dependencies Installed">
+    ```bash
+    bun --version  # Should show Bun version
+    ls node_modules  # Should show installed packages
+    ```
+  </Step>
+
+  <Step title="Environment Configured">
+    ```bash
+    cat .env  # Should show your SUPABASE_URL and SUPABASE_ANON_KEY
+    ```
+  </Step>
+
+  <Step title="Database Connected">
+    ```bash
+    curl http://localhost:3000/health
+    # Should return: {"status":"OK","timestamp":"...","version":"2.4.1"}
+    ```
+  </Step>
+</Steps>
+
+<Check>
+  Installation complete! Continue to the [Quick Start Guide](/quickstart) to launch pInk.
+</Check>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Bun installation fails">
+    **Problem**: `curl -fsSL https://bun.sh/install | bash` fails
+
+    **Solution**:
+    - On Windows, use WSL2 instead of native Windows
+    - On Linux, ensure you have `unzip` and `curl` installed
+    - Try the manual installation from [bun.sh/docs/installation](https://bun.sh/docs/installation)
+  </Accordion>
+
+  <Accordion title="Dependencies won't install">
+    **Problem**: `bun install` shows errors
+
+    **Solution**:
+    ```bash
+    # Clear cache and try again
+    rm -rf node_modules bun.lock
+    bun install
+    ```
+  </Accordion>
+
+  <Accordion title="Supabase connection fails">
+    **Problem**: Server shows `❌ Supabase connection FAILED!`
+
+    **Solution**:
+    - Verify your `.env` file has the correct `SUPABASE_URL` and `SUPABASE_ANON_KEY`
+    - Check that your Supabase project is active (not paused)
+    - Ensure there are no extra spaces or quotes in your `.env` values
+    - Verify your network can reach `*.supabase.co`
+  </Accordion>
+
+  <Accordion title="Port already in use">
+    **Problem**: `Error: Port 3000 is already in use`
+
+    **Solution**:
+    ```bash
+    # Find and kill the process using port 3000
+    lsof -ti:3000 | xargs kill -9
+
+    # Or use a different port
+    PORT=3001 bun run server
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Launch pInk and start browsing comics
+  </Card>
+  <Card title="Configuration" icon="sliders" href="/configuration">
+    Learn about all configuration options
+  </Card>
+  <Card title="Database Setup" icon="database" href="/development/database-setup">
+    Detailed database schema and setup
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/overview">
+    Explore the API endpoints
+  </Card>
+</CardGroup>

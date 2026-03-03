@@ -1,0 +1,317 @@
+---
+title: 'Comic Details'
+description: 'View detailed comic information, browse issues, and access download links'
+icon: 'book-open'
+---
+
+## Overview
+
+The comic detail page provides comprehensive information about a specific comic series and displays all available issues. It's implemented in `src/pages/Comic.tsx`.
+
+## Page Structure
+
+The detail page consists of:
+
+<CardGroup cols={2}>
+  <Card title="Header Breadcrumb" icon="arrow-right">
+    Shows comic title and year in the header navigation
+  </Card>
+  <Card title="Issue Grid" icon="grid">
+    Displays all issues for the selected comic
+  </Card>
+  <Card title="Controls Bar" icon="sliders">
+    Provides view mode toggle and year filtering
+  </Card>
+  <Card title="Modal View" icon="window-maximize">
+    Shows detailed issue information on click
+  </Card>
+</CardGroup>
+
+## URL Routing
+
+Comics are accessed via slug-based URLs that include the title and year:
+
+```
+/{slug}-{year}
+```
+
+Example: `/batman-2016`
+
+The routing is handled in `src/App.tsx:42`:
+
+```tsx App.tsx
+<Route path=":slug" element={<ComicPage />} />
+```
+
+## Data Loading
+
+The page loads both comic metadata and issues simultaneously using `Promise.all` (src/pages/Comic.tsx:47):
+
+```tsx Comic.tsx
+const loadData = async () => {
+  if (!slug) return;
+  setIsLoading(true);
+  setError(null);
+  try {
+    const [comicRes, issuesRes] = await Promise.all([
+      api.getComicById(slug),
+      api.getComicIssues(slug),
+    ]);
+    setCurrentComic(comicRes.data);
+    setHeaderComic(comicRes.data);
+    setCurrentIssues(issuesRes.data);
+  } catch (error) {
+    console.error(error);
+    setError("Não foi possível carregar as edições deste quadrinho.");
+  } finally {
+    setIsLoading(false);
+  }
+};
+```
+
+## Header Integration
+
+The comic information is displayed in the header breadcrumb:
+
+```tsx Header.tsx
+{view === "issues" && currentComic ? (
+  <h1 id="breadcrumb">
+    {`${currentComic.title} (${currentComic.year || "N/A"})`}
+  </h1>
+) : (
+  <span id="breadcrumb"></span>
+)}
+```
+
+## Issue Display
+
+Issues are displayed using the `IssueCard` component in a responsive grid:
+
+```tsx Comic.tsx
+<div className={`cards has-content ${viewMode === "list" ? "list-view" : ""}`}>
+  {filteredItems.map((item) => (
+    <IssueCard
+      key={item.id}
+      issue={item}
+      onClick={() => setSelectedIssueId(item.id)}
+    />
+  ))}
+</div>
+```
+
+### IssueCard Component
+
+The `IssueCard` component (src/components/IssueCard.tsx:10) displays:
+
+```tsx IssueCard.tsx
+const IssueCard: React.FC<IssueCardProps> = ({ issue, onClick }) => {
+  const metaInfo = [
+    `Ano: ${issue.year || "N/A"}`,
+    `Tamanho: ${issue.size || "N/A"}`,
+    `Gêneros: ${Array.isArray(issue.genres) 
+      ? issue.genres.join(", ") 
+      : issue.genres || "N/A"
+    }`,
+  ].join(" | ");
+
+  return (
+    <div className="card" onClick={onClick}>
+      <div className="card-image">
+        <img
+          src={issue.cover || PLACEHOLDER_IMAGE}
+          alt={`Capa do quadrinho ${issue.title} de ${issue.year}`}
+          referrerPolicy="no-referrer"
+          onError={(e: any) => {
+            e.target.src = PLACEHOLDER_IMAGE;
+          }}
+        />
+      </div>
+      <div className="card-info">
+        <h3 className="card-title">{issue.title}</h3>
+        <div className="card-meta">{metaInfo}</div>
+      </div>
+    </div>
+  );
+};
+```
+
+## Modal Component
+
+Clicking an issue card opens a modal with detailed information (src/components/Modal.tsx:10):
+
+### Modal Features
+
+<Steps>
+  <Step title="Issue Loading">
+    Fetches full issue details including synopsis and download link
+  </Step>
+  <Step title="Cover Display">
+    Shows high-quality issue cover image
+  </Step>
+  <Step title="Metadata Display">
+    Displays series, genres, year, size, language, and credits
+  </Step>
+  <Step title="Download Button">
+    Provides direct download link with file size
+  </Step>
+</Steps>
+
+### Modal Structure
+
+```tsx Modal.tsx
+<div className="modal open">
+  <div className="modal-overlay" onClick={onClose}></div>
+  <div className="modal-content">
+    <button className="modal-close" onClick={onClose}>×</button>
+    <div className="modal-body">
+      <div className="modal-image">
+        <img src={issue?.cover || PLACEHOLDER_IMAGE} />
+      </div>
+      <div className="modal-info">
+        <div className="modal-header">
+          <h2>{issue?.title}</h2>
+          {issue?.link && (
+            <a
+              href={issue.link}
+              target="_blank"
+              rel="noreferrer"
+              className="download-button"
+            >
+              <span>Download</span>
+              {issue.size && <span>({issue.size})</span>}
+            </a>
+          )}
+        </div>
+
+        <div className="modal-section">
+          <h3>Sinopse</h3>
+          <p>{issue?.synopsis || "Sem sinopse disponível."}</p>
+        </div>
+
+        <div className="modal-section">
+          <h3>Detalhes</h3>
+          <div className="modal-details">
+            <div className="detail-item">
+              <span className="detail-label">Série:</span>
+              <span>{issue?.series || "-"}</span>
+            </div>
+            <div className="detail-item">
+              <span className="detail-label">Gênero(s):</span>
+              <span>
+                {Array.isArray(issue?.genres)
+                  ? issue?.genres.join(", ")
+                  : issue?.genres || "-"}
+              </span>
+            </div>
+            <div className="detail-item">
+              <span className="detail-label">Lançamento:</span>
+              <span>{issue?.year || "-"}</span>
+            </div>
+            <div className="detail-item">
+              <span className="detail-label">Tamanho:</span>
+              <span>{issue?.size || "-"}</span>
+            </div>
+            <div className="detail-item">
+              <span className="detail-label">Idioma:</span>
+              <span>{issue?.language || "-"}</span>
+            </div>
+            <div className="detail-item">
+              <span className="detail-label">Crédito:</span>
+              {issue?.creditoLink ? (
+                <span
+                  className="credits-link clickable"
+                  onClick={() => window.open(issue.creditoLink, "_blank")}
+                >
+                  {issue.credito || "Visitar"}
+                </span>
+              ) : (
+                <span>{issue?.credito || "-"}</span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+```
+
+## Search & Filtering
+
+The comic detail page supports:
+
+- **Search**: Filter issues by title
+- **Year Filter**: Filter issues by publication year
+- **View Toggle**: Switch between grid and list views
+
+```tsx Comic.tsx
+const filteredItems = useMemo(() => {
+  let filtered = currentIssues.filter((item) =>
+    item.title.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (activeFilters.year.length > 0) {
+    filtered = filtered.filter((item) =>
+      activeFilters.year.includes(item.year?.toString())
+    );
+  }
+
+  return filtered;
+}, [currentIssues, searchTerm, activeFilters]);
+```
+
+## Back Navigation
+
+The controls bar includes a back button that returns to the home page (src/components/ControlsBar.tsx:124):
+
+```tsx ControlsBar.tsx
+{view === "issues" && (
+  <button className="control-button back-btn" onClick={onBackClick}>
+    <svg>...</svg>
+    <span className="control-text">Voltar</span>
+  </button>
+)}
+```
+
+## SEO Optimization
+
+Each comic detail page has dynamic SEO meta tags (src/pages/Comic.tsx:98):
+
+```tsx Comic.tsx
+useEffect(() => {
+  if (currentComic) {
+    updateMetaTags({
+      title: `pInk | ${currentComic.title} (${currentComic.year})`,
+      description: `Baixe e leia ${currentComic.title} (${currentComic.year}) gratuitamente no pInk. Acesse todas as edições disponíveis deste quadrinho da ${currentComic.publisher} em alta qualidade.`,
+      image: getDynamicOGImage(currentComic.title, currentComic.year),
+      keywords: `${currentComic.title}, ${currentComic.publisher}, quadrinhos ${currentComic.year}, baixar ${currentComic.title}, hq gratuita`,
+    });
+  }
+}, [currentComic]);
+```
+
+## Empty States
+
+The page handles various empty states:
+
+<Tabs>
+  <Tab title="No Issues">
+    Shows message when a comic has no issues available
+    ```tsx
+    <StatusMessage
+      message="Quadrinho sem edições"
+      description={`O quadrinho "${currentComic?.title}" ainda não tem edições disponíveis.`}
+    />
+    ```
+  </Tab>
+  <Tab title="No Search Results">
+    Displays empty search state when filters return no results
+  </Tab>
+  <Tab title="Error State">
+    Shows error message with retry option if data loading fails
+  </Tab>
+</Tabs>
+
+<Note>
+  The modal component automatically fetches full issue details when opened, ensuring up-to-date information.
+</Note>

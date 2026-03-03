@@ -1,80 +1,438 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick Start
+description: Get pInk up and running in minutes with this quick start guide
 ---
 
-## Get started in three steps
+## Overview
 
-Get your documentation site running locally and make your first customization.
-
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+This guide will help you go from zero to a running pInk instance in just a few minutes. By the end, you'll have both the backend API and frontend application running locally.
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  Make sure you've completed the [Installation Guide](/installation) before starting this quick start.
 </Note>
+
+## Launch pInk
+
+Follow these steps to start using pInk:
+
+<Steps>
+  <Step title="Start the Backend Server">
+    Open a terminal and start the backend API server with hot-reload enabled:
+
+    ```bash
+    bun run server
+    ```
+
+    You should see output like this:
+
+    ```bash
+    🔍 Testing Supabase connection...
+    🔗 Connecting to: https://your-project-ref.supabase.co
+    ✅ Supabase connection SUCCESSFUL!
+    📊 Database test: Found 10 comics in database
+    🎯 Sample data: { id: 1, title: 'Watchmen', ... }
+    🌍 Environment: development
+    🚀 Database ready for API requests!
+    🚀 pInk server running on http://localhost:3000
+    ```
+
+    **What this does:**
+    - Tests the Supabase database connection
+    - Starts the ElysiaJS server on port 3000
+    - Enables hot-reload for code changes
+    - Activates Swagger documentation at `/swagger`
+
+    <Tip>
+      The `--watch` flag automatically restarts the server when you make code changes.
+    </Tip>
+
+    <Warning>
+      If you see connection errors, verify your `.env` file has the correct Supabase credentials.
+    </Warning>
+  </Step>
+
+  <Step title="Start the Frontend Development Server">
+    Open a **new terminal window** (keep the backend running) and start the frontend:
+
+    ```bash
+    bun run dev
+    ```
+
+    You should see:
+
+    ```bash
+    VITE v7.1.2  ready in 234 ms
+
+    ➜  Local:   http://localhost:5173/
+    ➜  Network: use --host to expose
+    ➜  press h + enter to show help
+    ```
+
+    **What this does:**
+    - Starts Vite development server on port 5173
+    - Enables hot module replacement (HMR)
+    - Watches for file changes
+    - Optimizes React components
+
+    <Tip>
+      Vite provides instant updates when you modify React components - no page refresh needed!
+    </Tip>
+  </Step>
+
+  <Step title="Access the Application">
+    Open your web browser and navigate to:
+
+    ```
+    http://localhost:5173
+    ```
+
+    You should see the pInk homepage with:
+    - Header with search bar
+    - Comic catalog grid/list view
+    - Filter controls (publisher, year, language)
+    - Footer with credits
+
+    <Check>
+      Success! pInk is now running locally.
+    </Check>
+  </Step>
+
+  <Step title="Verify the API">
+    Test that the backend API is working correctly:
+
+    **Option 1: Browser**
+    Open `http://localhost:3000` to see the API welcome message:
+
+    ```json
+    {
+      "name": "pInk API",
+      "description": "Catálogo de quadrinhos",
+      "version": "2.4.1",
+      "endpoints": {
+        "health": "/health",
+        "comics": "/api/comics",
+        "issues": "/api/issues"
+      }
+    }
+    ```
+
+    **Option 2: cURL**
+    ```bash
+    # Health check
+    curl http://localhost:3000/health
+
+    # Get all comics
+    curl http://localhost:3000/api/comics
+
+    # Get all issues (with pagination)
+    curl "http://localhost:3000/api/issues?limit=10&offset=0"
+    ```
+
+    **Option 3: Swagger UI**
+    Open `http://localhost:3000/swagger` for interactive API documentation (development mode only).
+
+    <Note>
+      Swagger documentation is only available when `NODE_ENV` is set to `development`.
+    </Note>
+  </Step>
+</Steps>
+
+## Quick Tour
+
+Now that pInk is running, here's what you can do:
+
+<Tabs>
+  <Tab title="Browse Comics">
+    ### Catalog View
+
+    The homepage displays your entire comic collection:
+
+    **Features:**
+    - **Grid View**: Visual browsing with cover art
+    - **List View**: Compact view for quick scanning
+    - **Search**: Type in the header search bar to filter by title
+    - **Sort**: Comics are sorted alphabetically by default
+
+    Click any comic to view its individual issues.
+  </Tab>
+
+  <Tab title="Filter & Search">
+    ### Finding Comics
+
+    Use the filter controls in the top-right corner:
+
+    **Filter Options:**
+    1. Click the filter icon (shows active filter count)
+    2. Select publishers, years, or languages
+    3. Apply multiple filters simultaneously
+    4. Click "Limpar Todos" to clear all filters
+
+    **Search:**
+    - Type in the header search bar
+    - Results update in real-time
+    - Works with both comics and issues
+  </Tab>
+
+  <Tab title="View Details">
+    ### Comic Details
+
+    Click on a comic to see all its issues:
+
+    **Issue View Shows:**
+    - All issues in the series
+    - Issue numbers and titles
+    - Cover art for each issue
+    - Year and metadata
+
+    **Click an issue** to open the detail modal with:
+    - Full synopsis
+    - Genres and categories
+    - File size
+    - Author credits
+    - Direct download link
+  </Tab>
+
+  <Tab title="API Access">
+    ### Using the API
+
+    Access the REST API programmatically:
+
+    ```bash
+    # Get all comics
+    curl http://localhost:3000/api/comics
+
+    # Get specific comic by ID
+    curl http://localhost:3000/api/comics/1
+
+    # Get comic by slug
+    curl http://localhost:3000/api/comics/watchmen-1986
+
+    # Get all issues for a comic
+    curl http://localhost:3000/api/comics/1/issues
+
+    # Search issues with pagination
+    curl "http://localhost:3000/api/issues?search=batman&limit=20"
+    ```
+
+    See the [API Reference](/api/overview) for complete documentation.
+  </Tab>
+</Tabs>
+
+## Development Workflow
+
+Here's how to work with pInk during development:
+
+<CodeGroup>
+```bash Terminal 1 - Backend
+# Start backend with hot-reload
+bun run server
+
+# The server automatically restarts when you modify:
+# - src/server/**/*.ts
+# - API controllers
+# - Database config
+```
+
+```bash Terminal 2 - Frontend  
+# Start frontend with HMR
+bun run dev
+
+# Vite automatically updates when you modify:
+# - src/**/*.tsx
+# - src/**/*.css
+# - Components and pages
+```
+
+```bash Terminal 3 - Testing
+# Test API endpoints
+curl http://localhost:3000/api/comics
+
+# Check health
+curl http://localhost:3000/health
+
+# View logs from the other terminals
+```
+</CodeGroup>
+
+## Environment Configuration
+
+Your `.env` file should contain:
+
+```bash
+# Supabase Configuration
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_ANON_KEY=your_supabase_anon_key_here
+
+# Optional: Custom port (defaults to 3000)
+# PORT=3001
+
+# Optional: Node environment
+# NODE_ENV=development
+```
+
+<Warning>
+  Never commit your `.env` file to version control. It's already in `.gitignore`.
+</Warning>
+
+## Adding Your First Comic
+
+If you have an empty database, you can add comics through:
+
+**Option 1: Supabase Dashboard**
+1. Go to your Supabase project
+2. Navigate to **Table Editor**
+3. Select the `Comic` table
+4. Click **Insert row**
+5. Fill in the fields:
+   - `title`: Comic series name
+   - `year`: Publication year
+   - `issues`: Total issue count
+   - `cover`: URL to cover image
+   - `publisherId`: ID from Publisher table
+   - `idiomId`: ID from Idiom table
+
+**Option 2: SQL Editor**
+```sql
+-- Insert a publisher
+INSERT INTO "Publisher" (name) 
+VALUES ('DC Comics') 
+RETURNING id;
+
+-- Insert a language
+INSERT INTO "Idiom" (name) 
+VALUES ('English') 
+RETURNING id;
+
+-- Insert a comic (use the IDs from above)
+INSERT INTO "Comic" (title, year, issues, cover, "publisherId", "idiomId")
+VALUES (
+  'Watchmen',
+  1986,
+  12,
+  'https://example.com/watchmen-cover.jpg',
+  1,  -- publisherId
+  1   -- idiomId
+);
+```
+
+## Common Tasks
+
+<AccordionGroup>
+  <Accordion title="Change the port">
+    **Backend:**
+    ```bash
+    PORT=3001 bun run server
+    ```
+
+    **Frontend:**
+    Edit `vite.config.js`:
+    ```javascript
+    export default defineConfig({
+      server: {
+        port: 5174  // Change from 5173
+      }
+    })
+    ```
+  </Accordion>
+
+  <Accordion title="Clear the console">
+    The servers output a lot of logs. To clear:
+    - **Mac/Linux**: `Ctrl + L` or type `clear`
+    - **Windows**: `cls`
+  </Accordion>
+
+  <Accordion title="Stop the servers">
+    In each terminal window:
+    - Press `Ctrl + C` to stop the server
+    - Or close the terminal window
+  </Accordion>
+
+  <Accordion title="Restart with fresh install">
+    ```bash
+    # Stop all servers (Ctrl + C)
+    
+    # Remove dependencies
+    rm -rf node_modules bun.lock
+    
+    # Reinstall
+    bun install
+    
+    # Restart servers
+    bun run server    # Terminal 1
+    bun run dev       # Terminal 2
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Port already in use">
+    **Error**: `EADDRINUSE: address already in use :::3000`
+
+    **Solution**:
+    ```bash
+    # Find and kill the process
+    lsof -ti:3000 | xargs kill -9
+    
+    # Or use a different port
+    PORT=3001 bun run server
+    ```
+  </Accordion>
+
+  <Accordion title="Database connection fails">
+    **Error**: `❌ Supabase connection FAILED!`
+
+    **Solutions**:
+    1. Check your `.env` file exists and has correct values
+    2. Verify your Supabase project is not paused
+    3. Test the connection manually:
+       ```bash
+       curl https://your-project-ref.supabase.co/rest/v1/
+       ```
+    4. Check the database tables exist in Supabase
+  </Accordion>
+
+  <Accordion title="Frontend won't load">
+    **Error**: `Failed to fetch` or blank page
+
+    **Solutions**:
+    1. Verify the backend is running (`http://localhost:3000/health`)
+    2. Check browser console for errors (F12)
+    3. Clear browser cache and reload
+    4. Check that `API_BASE_URL` in `src/api.ts` is correct:
+       ```typescript
+       const API_BASE_URL = "";  // Empty for same-origin
+       ```
+  </Accordion>
+
+  <Accordion title="Hot reload not working">
+    **Backend**: Make sure you're using `bun run server` (not `bun run start`)
+    
+    **Frontend**: 
+    1. Check Vite is running and showing "ready"
+    2. Try refreshing the browser
+    3. Restart Vite: `Ctrl+C` then `bun run dev`
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="sliders" href="/configuration">
+    Learn about all configuration options and environment variables
+  </Card>
+  <Card title="Features" icon="stars" href="/features">
+    Explore all of pInk's powerful features
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/overview">
+    Complete API documentation and examples
+  </Card>
+  <Card title="Database Setup" icon="database" href="/development/database-setup">
+    Detailed database schema and relationships
+  </Card>
+</CardGroup>
+
+<Check>
+  You're all set! Start browsing your comic collection with pInk.
+</Check>

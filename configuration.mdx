@@ -1,0 +1,487 @@
+---
+title: Configuration
+description: Configure pInk for your environment with environment variables and settings
+---
+
+## Overview
+
+pInk is configured primarily through environment variables stored in a `.env` file. This approach keeps sensitive credentials secure and makes it easy to configure different environments.
+
+## Environment Variables
+
+All configuration is done through the `.env` file in the project root.
+
+### Quick Setup
+
+Create your `.env` file from the example:
+
+```bash
+cp .env.example .env
+```
+
+Then edit `.env` with your configuration:
+
+```bash .env
+# Supabase Configuration
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_ANON_KEY=your_supabase_anon_key_here
+```
+
+### Required Variables
+
+These variables are required for pInk to function:
+
+<ParamField path="SUPABASE_URL" type="string" required>
+  Your Supabase project URL. Find this in your Supabase project settings under **API** → **Project URL**.
+
+  **Format**: `https://[project-ref].supabase.co`
+
+  **Example**: `https://abcdefghijklmnop.supabase.co`
+
+  <Warning>
+    Do not include a trailing slash in the URL.
+  </Warning>
+</ParamField>
+
+<ParamField path="SUPABASE_ANON_KEY" type="string" required>
+  Your Supabase anonymous (public) API key. Find this in your Supabase project settings under **API** → **Project API keys** → **anon public**.
+
+  **Format**: Long base64-encoded JWT token
+
+  **Example**: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`
+
+  <Note>
+    The anon key is safe to use in client-side code. It's protected by Row Level Security (RLS) policies on your database.
+  </Note>
+</ParamField>
+
+### Optional Variables
+
+These variables are optional and have default values:
+
+<ParamField path="PORT" type="number" default="3000">
+  The port number for the backend API server.
+
+  **Usage**:
+  ```bash
+  PORT=3001
+  ```
+
+  **Default**: `3000`
+
+  <Tip>
+    Useful if port 3000 is already in use on your system.
+  </Tip>
+</ParamField>
+
+<ParamField path="NODE_ENV" type="string" default="development">
+  The application environment mode.
+
+  **Values**:
+  - `development` - Enables Swagger docs, detailed logging
+  - `production` - Optimizes performance, disables debug features
+
+  **Usage**:
+  ```bash
+  NODE_ENV=production
+  ```
+
+  **Default**: `development`
+
+  <Note>
+    In production, Swagger documentation is automatically disabled for security.
+  </Note>
+</ParamField>
+
+<ParamField path="VERCEL" type="boolean">
+  Automatically set by Vercel during deployment. Do not set manually.
+
+  **Purpose**: Prevents the server from starting when building on Vercel (uses serverless functions instead).
+
+  <Warning>
+    This variable is managed by the deployment platform. Don't add it to your `.env` file.
+  </Warning>
+</ParamField>
+
+## Configuration Files
+
+### Backend Configuration
+
+The backend reads configuration from:
+
+<CodeGroup>
+```typescript src/server/config/database.ts
+import { createClient } from "@supabase/supabase-js";
+
+const SUPABASE_URL = process.env.SUPABASE_URL || "https://placeholder.supabase.co";
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || "placeholder-key";
+
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+  },
+  db: {
+    schema: "public",
+  },
+});
+```
+
+```typescript src/server/index.ts
+const PORT = process.env.PORT || 3000;
+
+const app = new Elysia()
+  .use(cors())
+  .use((app) =>
+    process.env.NODE_ENV === "development" 
+      ? app.use(swagger()) 
+      : app
+  )
+  // ... routes
+
+app.listen(PORT);
+```
+</CodeGroup>
+
+### Frontend Configuration
+
+The frontend API client configuration:
+
+```typescript src/api.ts
+const API_BASE_URL = "";
+
+export const api = {
+  async healthCheck(): Promise<boolean> {
+    const response = await fetch(`${API_BASE_URL}/health`);
+    return response.ok;
+  },
+  // ... other methods
+};
+```
+
+<Note>
+  `API_BASE_URL` is empty by default for same-origin requests. This works because Vite proxies API requests to the backend during development.
+</Note>
+
+### Vite Configuration
+
+```javascript vite.config.js
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 5173,  // Frontend dev server port
+  },
+});
+```
+
+## Supabase Configuration
+
+### Finding Your Credentials
+
+<Steps>
+  <Step title="Open Supabase Dashboard">
+    Go to [app.supabase.com](https://app.supabase.com) and select your project.
+  </Step>
+
+  <Step title="Navigate to API Settings">
+    Click **Settings** (gear icon) → **API** in the sidebar.
+  </Step>
+
+  <Step title="Copy Project URL">
+    Under **Project URL**, copy the URL:
+    ```
+    https://abcdefghijklmnop.supabase.co
+    ```
+    Paste this as your `SUPABASE_URL`.
+  </Step>
+
+  <Step title="Copy Anon Key">
+    Under **Project API keys**, find **anon public** and click **Copy**.
+    
+    Paste this as your `SUPABASE_ANON_KEY`.
+
+    <Warning>
+      Do **not** use the `service_role` key in your `.env` file. Use only the `anon` key.
+    </Warning>
+  </Step>
+</Steps>
+
+### Database Client Options
+
+The Supabase client is configured with these options:
+
+```typescript
+createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    persistSession: false,      // Don't persist auth sessions
+    autoRefreshToken: false,    // Don't auto-refresh tokens
+  },
+  db: {
+    schema: "public",           // Use the public schema
+  },
+});
+```
+
+**Why these settings?**
+- `persistSession: false` - pInk doesn't use authentication, so we don't need to persist sessions
+- `autoRefreshToken: false` - No auth tokens to refresh
+- `schema: "public"` - All tables are in the public schema
+
+## Development vs Production
+
+### Development Configuration
+
+```bash .env.development
+# Development settings
+SUPABASE_URL=https://dev-project.supabase.co
+SUPABASE_ANON_KEY=dev_key_here
+NODE_ENV=development
+PORT=3000
+```
+
+**Development features:**
+- Swagger API docs at `/swagger`
+- Hot reload for code changes
+- Detailed error messages
+- Console logging enabled
+
+### Production Configuration
+
+```bash .env.production
+# Production settings
+SUPABASE_URL=https://prod-project.supabase.co
+SUPABASE_ANON_KEY=prod_key_here
+NODE_ENV=production
+```
+
+**Production optimizations:**
+- Swagger disabled
+- Minimal logging
+- Error messages sanitized
+- Performance optimizations
+
+<Warning>
+  Always use separate Supabase projects for development and production to avoid data corruption.
+</Warning>
+
+## Vercel Deployment
+
+When deploying to Vercel, configure environment variables in the Vercel dashboard:
+
+<Steps>
+  <Step title="Open Project Settings">
+    Go to your Vercel project → **Settings** → **Environment Variables**.
+  </Step>
+
+  <Step title="Add Variables">
+    Add each environment variable:
+
+    | Key | Value | Environment |
+    | --- | --- | --- |
+    | `SUPABASE_URL` | Your production Supabase URL | Production |
+    | `SUPABASE_ANON_KEY` | Your production anon key | Production |
+    | `NODE_ENV` | `production` | Production |
+  </Step>
+
+  <Step title="Deploy">
+    Vercel will automatically use these variables for production deployments.
+  </Step>
+</Steps>
+
+<Tip>
+  You can also add preview environment variables for staging deployments.
+</Tip>
+
+## Configuration Validation
+
+pInk validates your configuration on startup:
+
+```typescript
+const isMissingVars = !process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY;
+
+if (isMissingVars) {
+  console.warn(
+    "⚠️ Warning: SUPABASE_URL or SUPABASE_ANON_KEY is missing in process.env"
+  );
+}
+```
+
+The database connection is tested:
+
+```bash
+🔍 Testing Supabase connection...
+🔗 Connecting to: https://your-project.supabase.co
+✅ Supabase connection SUCCESSFUL!
+📊 Database test: Found 10 comics in database
+```
+
+If connection fails, you'll see detailed error messages:
+
+```bash
+❌ Supabase connection FAILED!
+💥 Error: Invalid API key
+🔐 Solution: Verify your SUPABASE_ANON_KEY is correct
+```
+
+## Security Best Practices
+
+<AccordionGroup>
+  <Accordion title="Never commit .env files">
+    The `.env` file is automatically ignored by Git:
+
+    ```bash .gitignore
+    .env
+    .env.local
+    .env.production
+    ```
+
+    <Warning>
+      Double-check that `.env` is in your `.gitignore` before committing.
+    </Warning>
+  </Accordion>
+
+  <Accordion title="Use different projects for dev/prod">
+    Always use separate Supabase projects:
+    - **Development**: For testing and development
+    - **Production**: For live data only
+
+    This prevents:
+    - Accidental data corruption
+    - Test data in production
+    - Security breaches from dev credentials
+  </Accordion>
+
+  <Accordion title="Rotate keys regularly">
+    Supabase allows you to rotate API keys:
+
+    1. Go to **Settings** → **API**
+    2. Under **Project API keys**, click **Generate new anon key**
+    3. Update your `.env` file
+    4. Restart the server
+
+    <Tip>
+      Set a reminder to rotate keys every 90 days.
+    </Tip>
+  </Accordion>
+
+  <Accordion title="Use environment-specific keys">
+    Never use production keys in development:
+
+    ```bash
+    # ❌ BAD - Using prod key in dev
+    SUPABASE_URL=https://prod-project.supabase.co
+
+    # ✅ GOOD - Separate projects
+    SUPABASE_URL=https://dev-project.supabase.co
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Environment variables not loading">
+    **Problem**: Changes to `.env` not reflected in application
+
+    **Solutions**:
+    1. Restart the server completely:
+       ```bash
+       # Press Ctrl+C to stop
+       bun run server
+       ```
+    2. Verify the `.env` file is in the project root (same directory as `package.json`)
+    3. Check for syntax errors in `.env` (no quotes around values)
+    4. Ensure there are no spaces around the `=` sign
+  </Accordion>
+
+  <Accordion title="Invalid API key error">
+    **Problem**: `Invalid API key` or `401 Unauthorized`
+
+    **Solutions**:
+    1. Verify you copied the **anon public** key (not service_role)
+    2. Check for extra spaces or line breaks in the key
+    3. Regenerate the key in Supabase dashboard
+    4. Ensure the Supabase project is not paused
+  </Accordion>
+
+  <Accordion title="Wrong database URL">
+    **Problem**: `Failed to connect` or `ENOTFOUND`
+
+    **Solutions**:
+    1. Verify the URL format: `https://[project-ref].supabase.co`
+    2. Remove any trailing slashes
+    3. Check that the project reference is correct
+    4. Test the URL in a browser - it should load the Supabase API
+  </Accordion>
+
+  <Accordion title="Port conflicts">
+    **Problem**: `EADDRINUSE` or port already in use
+
+    **Solution**:
+    Change the port in your `.env`:
+    ```bash
+    PORT=3001
+    ```
+    Then restart the server.
+  </Accordion>
+</AccordionGroup>
+
+## Advanced Configuration
+
+### Custom API Base URL
+
+If your frontend and backend are on different domains:
+
+```typescript src/api.ts
+// For production with separate API domain
+const API_BASE_URL = import.meta.env.VITE_API_URL || "";
+```
+
+Then add to `.env`:
+```bash
+VITE_API_URL=https://api.yourdomain.com
+```
+
+### Database Connection Pooling
+
+For high-traffic deployments, configure Supabase connection pooling:
+
+1. Go to **Database** → **Settings** → **Connection pooling**
+2. Enable **Connection pooler**
+3. Use the pooled connection string for better performance
+
+### CORS Configuration
+
+CORS is enabled by default. To restrict origins:
+
+```typescript src/server/index.ts
+import { cors } from "@elysiajs/cors";
+
+const app = new Elysia()
+  .use(cors({
+    origin: [
+      "http://localhost:5173",
+      "https://yourdomain.com"
+    ]
+  }))
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Launch pInk with your configuration
+  </Card>
+  <Card title="Database Setup" icon="database" href="/development/database-setup">
+    Set up your Supabase database schema
+  </Card>
+  <Card title="Deployment" icon="cloud" href="/development/deployment">
+    Deploy pInk to production
+  </Card>
+  <Card title="Troubleshooting" icon="wrench" href="/development/troubleshooting">
+    Solve common configuration issues
+  </Card>
+</CardGroup>

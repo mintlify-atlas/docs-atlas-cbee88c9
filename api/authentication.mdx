@@ -1,0 +1,75 @@
+---
+title: Authentication
+description: Authentication and security configuration for the pInk API
+---
+
+## Current Authentication Status
+
+The pInk API is currently **open and does not require authentication**. All endpoints are publicly accessible without API keys or tokens.
+
+## CORS Configuration
+
+The API is configured with CORS (Cross-Origin Resource Sharing) enabled, allowing requests from web browsers:
+
+```typescript
+const app = new Elysia()
+  .use(cors())
+  // ... other middleware
+```
+
+This means you can call the API directly from frontend applications running on different domains.
+
+## Backend Authentication
+
+While the API itself doesn't require authentication, the backend connects to Supabase for data storage:
+
+```typescript
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+  },
+  db: {
+    schema: "public",
+  },
+});
+```
+
+### Environment Variables
+
+The following environment variables are required for the API to function:
+
+- `SUPABASE_URL` - Your Supabase project URL
+- `SUPABASE_ANON_KEY` - Your Supabase anonymous key
+
+These credentials are used server-side only and are not exposed to API consumers.
+
+## Future Authentication Considerations
+
+If you plan to add authentication to the API in the future, consider:
+
+### API Key Authentication
+```bash
+curl -H "X-API-Key: your-api-key" http://localhost:3000/api/comics
+```
+
+### JWT Bearer Tokens
+```bash
+curl -H "Authorization: Bearer your-jwt-token" http://localhost:3000/api/comics
+```
+
+### Rate Limiting
+Implementing rate limiting to prevent abuse:
+- Limit requests per IP address
+- Different tiers for authenticated vs. unauthenticated users
+- Graceful degradation with 429 status codes
+
+## Security Best Practices
+
+When deploying the API:
+
+1. **Never expose** your `SUPABASE_ANON_KEY` in client-side code
+2. Use environment variables for all sensitive configuration
+3. Consider implementing rate limiting for production deployments
+4. Monitor API usage and set up alerts for unusual patterns
+5. Use HTTPS in production environments

@@ -1,0 +1,278 @@
+---
+title: 'Filtering & Search'
+description: 'Filter comics by publisher, year, and language with real-time results'
+icon: 'filter'
+---
+
+## Overview
+
+pInk provides powerful filtering capabilities through the `ControlsBar` component, allowing users to narrow down comics by multiple criteria simultaneously.
+
+## Filter Types
+
+The system supports three main filter categories:
+
+<CardGroup cols={3}>
+  <Card title="Publisher" icon="building">
+    Filter by comic publisher (Marvel, DC, Image, etc.)
+  </Card>
+  <Card title="Year" icon="calendar">
+    Filter by publication year
+  </Card>
+  <Card title="Language" icon="language">
+    Filter by language (available on home view only)
+  </Card>
+</CardGroup>
+
+## ControlsBar Component
+
+The filtering interface is implemented in `src/components/ControlsBar.tsx` and provides:
+
+- **Filter dropdown** with checkbox selections
+- **Active filter badge** showing count
+- **Clear all filters** button
+- **Dynamic filter options** based on available data
+
+### Filter State Management
+
+Filters are managed via React state passed from parent components:
+
+```tsx Home.tsx
+const [activeFilters, setActiveFilters] = useState<{
+  publisher: string[];
+  year: string[];
+  language: string[];
+}>({
+  publisher: [],
+  year: [],
+  language: [],
+});
+```
+
+### Filter Generation
+
+Filter options are dynamically generated from the current dataset using `useMemo` (src/components/ControlsBar.tsx:59):
+
+```tsx ControlsBar.tsx
+const filters = useMemo(() => {
+  const publishers = new Set<string>();
+  const years = new Set<string>();
+  const languages = new Set<string>();
+
+  items.forEach((item) => {
+    if ("publisher" in item && item.publisher) publishers.add(item.publisher);
+    if (item.year) years.add(item.year.toString());
+    if (item.language) languages.add(item.language);
+  });
+
+  return {
+    publishers: Array.from(publishers).sort(),
+    years: Array.from(years).sort((a, b) => parseInt(b) - parseInt(a)),
+    languages: Array.from(languages).sort(),
+  };
+}, [items]);
+```
+
+<Note>
+  Years are sorted in descending order (newest first) while publishers and languages are sorted alphabetically.
+</Note>
+
+## Filter UI
+
+The filter dropdown opens when clicking the filter button and displays available options:
+
+```tsx ControlsBar.tsx
+<div className="filter-dropdown open">
+  {view === "home" && (
+    <div className="filter-section">
+      <h4 className="filter-title">Editora</h4>
+      <div className="filter-options">
+        {filters.publishers.map((p) => (
+          <label key={p} className="filter-option">
+            <input
+              type="checkbox"
+              checked={activeFilters.publisher.includes(p)}
+              onChange={() => toggleFilter("publisher", p)}
+            />
+            <span className="filter-label">{p}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  )}
+
+  <div className="filter-section">
+    <h4 className="filter-title">Ano</h4>
+    <div className="filter-options">
+      {filters.years.map((y) => (
+        <label key={y} className="filter-option">
+          <input
+            type="checkbox"
+            checked={activeFilters.year.includes(y)}
+            onChange={() => toggleFilter("year", y)}
+          />
+          <span className="filter-label">{y}</span>
+        </label>
+      ))}
+    </div>
+  </div>
+
+  <div className="filter-actions">
+    <button
+      className="filter-clear-all"
+      onClick={() =>
+        setActiveFilters({ publisher: [], year: [], language: [] })
+      }
+    >
+      Limpar Todos
+    </button>
+  </div>
+</div>
+```
+
+## Filter Toggle Logic
+
+Toggling a filter adds or removes it from the active filters array (src/components/ControlsBar.tsx:77):
+
+```tsx ControlsBar.tsx
+const toggleFilter = (type: "publisher" | "year" | "language", value: string) => {
+  const current = activeFilters[type] || [];
+  const updated = current.includes(value)
+    ? current.filter((v: string) => v !== value)
+    : [...current, value];
+
+  setActiveFilters({ ...activeFilters, [type]: updated });
+};
+```
+
+## Active Filter Badge
+
+The filter button displays a badge showing the total number of active filters:
+
+```tsx ControlsBar.tsx
+const totalActive = Object.values(activeFilters).flat().length;
+
+// In the render:
+{totalActive > 0 && (
+  <span className="filter-badge">
+    {totalActive}
+  </span>
+)}
+```
+
+## Filter Application
+
+Filters are applied in the parent component using `useMemo` for optimal performance (src/pages/Home.tsx:49):
+
+```tsx Home.tsx
+const filteredItems = useMemo(() => {
+  let filtered = allComics.filter((item) =>
+    item.title.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Apply year filter
+  if (activeFilters.year.length > 0) {
+    filtered = filtered.filter((item) =>
+      activeFilters.year.includes(item.year?.toString())
+    );
+  }
+
+  // Apply publisher filter
+  if (activeFilters.publisher.length > 0) {
+    filtered = filtered.filter((c) =>
+      activeFilters.publisher.includes(c.publisher)
+    );
+  }
+
+  // Apply language filter
+  if (activeFilters.language.length > 0) {
+    filtered = filtered.filter((c) =>
+      activeFilters.language.includes(c.language)
+    );
+  }
+
+  return filtered;
+}, [allComics, searchTerm, activeFilters]);
+```
+
+## Search Integration
+
+Filters work seamlessly with the search functionality. Both are applied simultaneously:
+
+<Steps>
+  <Step title="Text Search">
+    First, comics are filtered by search term (case-insensitive)
+  </Step>
+  <Step title="Filter Application">
+    Then, active filters are applied to the search results
+  </Step>
+  <Step title="Result Display">
+    The filtered results are rendered in the grid
+  </Step>
+</Steps>
+
+## Click-Outside Handling
+
+The filter dropdown automatically closes when clicking outside (src/components/ControlsBar.tsx:40):
+
+```tsx ControlsBar.tsx
+useEffect(() => {
+  const handleClickOutside = (event: MouseEvent) => {
+    if (
+      filterContainerRef.current &&
+      !filterContainerRef.current.contains(event.target as Node)
+    ) {
+      setIsFilterOpen(false);
+    }
+  };
+
+  if (isFilterOpen) {
+    document.addEventListener("mousedown", handleClickOutside);
+  }
+
+  return () => {
+    document.removeEventListener("mousedown", handleClickOutside);
+  };
+}, [isFilterOpen]);
+```
+
+## View-Specific Filters
+
+<Info>
+  The **Publisher** filter is only available on the home page (comic listing). On the comic detail page (issues view), only **Year** filtering is available.
+</Info>
+
+## Empty Results
+
+When filters produce no results, the system displays an empty search state:
+
+```tsx Home.tsx
+<StatusMessage
+  type={
+    searchTerm || 
+    activeFilters.year.length > 0 || 
+    activeFilters.publisher.length > 0 || 
+    activeFilters.language.length > 0 
+      ? "empty_search" 
+      : "empty_content"
+  }
+/>
+```
+
+## Performance Optimization
+
+<AccordionGroup>
+  <Accordion title="Memoization">
+    Both filter generation and application use `useMemo` to prevent unnecessary recalculations
+  </Accordion>
+  <Accordion title="Efficient Updates">
+    Filter state updates only trigger re-renders of affected components
+  </Accordion>
+  <Accordion title="Click Detection">
+    Event listeners are properly cleaned up to prevent memory leaks
+  </Accordion>
+</AccordionGroup>
+
+<Warning>
+  Filters are reset when navigating between the home page and comic detail pages.
+</Warning>

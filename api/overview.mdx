@@ -1,0 +1,88 @@
+---
+title: API Overview
+description: Introduction to the pInk REST API for accessing comic book catalog data
+---
+
+## Introduction
+
+The pInk API is a REST API built with ElysiaJS that provides programmatic access to a comprehensive catalog of comic books and issues. The API allows you to retrieve comic metadata, browse issues, and access detailed information about publications.
+
+## Base URL
+
+```
+http://localhost:3000
+```
+
+In production environments, replace `localhost:3000` with your deployment URL.
+
+## Response Format
+
+All API responses follow a consistent structure with a `success` field:
+
+**Successful Response:**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+**Error Response:**
+```json
+{
+  "success": false,
+  "message": "Error description"
+}
+```
+
+## Error Handling
+
+The API uses standard HTTP status codes:
+
+- **200 OK** - Request succeeded
+- **404 Not Found** - Resource not found
+- **500 Internal Server Error** - Server error
+
+Error responses include a `success: false` field and a descriptive `message` field.
+
+## Available Endpoints
+
+The API provides the following endpoint groups:
+
+### Health
+- `GET /health` - API health check and version info
+
+### Comics
+- `GET /api/comics` - List all comics
+- `GET /api/comics/:id` - Get comic by ID or slug
+- `GET /api/comics/:id/issues` - Get all issues for a comic
+
+### Issues
+- `GET /api/issues` - List all issues with pagination
+- `GET /api/issues/:id` - Get issue by ID
+
+## Root Endpoint
+
+The root endpoint provides API metadata:
+
+```bash
+curl http://localhost:3000/
+```
+
+**Response:**
+```json
+{
+  "name": "pInk API",
+  "description": "Catálogo de quadrinhos",
+  "version": "1.0.0",
+  "endpoints": {
+    "health": "/health",
+    "comics": "/api/comics",
+    "issues": "/api/issues"
+  }
+}
+```
+
+## Swagger Documentation
+
+In development mode, interactive Swagger documentation is available for exploring and testing endpoints.

@@ -1,0 +1,90 @@
+---
+title: Health Check
+description: API health check endpoint for monitoring and status verification
+---
+
+## Health Check
+
+The health endpoint provides a simple way to verify that the API is running and responsive.
+
+```bash
+GET /health
+```
+
+### Example Request
+
+```bash
+curl http://localhost:3000/health
+```
+
+### Response
+
+<ResponseField name="status" type="string" required>
+  Health status indicator ("OK" when the API is healthy)
+</ResponseField>
+
+<ResponseField name="timestamp" type="string" required>
+  Current server timestamp in ISO 8601 format
+</ResponseField>
+
+<ResponseField name="version" type="string" required>
+  API version number from APP_VERSION constant
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "status": "OK",
+  "timestamp": "2026-03-03T14:30:00.000Z",
+  "version": "1.0.0"
+}
+```
+
+## Use Cases
+
+### Monitoring
+
+Use this endpoint to monitor API availability:
+
+```bash
+#!/bin/bash
+while true; do
+  STATUS=$(curl -s http://localhost:3000/health | jq -r '.status')
+  if [ "$STATUS" != "OK" ]; then
+    echo "API is down!"
+    # Send alert
+  fi
+  sleep 60
+done
+```
+
+### Load Balancer Health Checks
+
+Configure your load balancer to check this endpoint:
+
+- **Path**: `/health`
+- **Expected status code**: `200`
+- **Expected response**: `{"status": "OK"}`
+
+### Deployment Verification
+
+Verify successful deployment by checking the version:
+
+```bash
+curl http://localhost:3000/health | jq '.version'
+```
+
+## Implementation Details
+
+The health check endpoint is defined in `src/server/index.ts:16-20`:
+
+```typescript
+.get("/health", () => ({
+  status: "OK",
+  timestamp: new Date().toISOString(),
+  version: APP_VERSION,
+}))
+```
+
+This is a simple synchronous endpoint that always returns a 200 status code when the API process is running. For deeper health checks that verify database connectivity, see the startup logs which include Supabase connection testing.

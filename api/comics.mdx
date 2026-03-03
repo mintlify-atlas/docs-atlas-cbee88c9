@@ -1,0 +1,354 @@
+---
+title: Comics Endpoints
+description: API endpoints for retrieving comic book information
+---
+
+## List All Comics
+
+Retrieve a list of all comics in the catalog.
+
+```bash
+GET /api/comics
+```
+
+### Example Request
+
+```bash
+curl http://localhost:3000/api/comics
+```
+
+### Response
+
+<ResponseField name="success" type="boolean" required>
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="count" type="number" required>
+  Total number of comics returned
+</ResponseField>
+
+<ResponseField name="data" type="array" required>
+  Array of comic objects
+  
+  <ResponseField name="id" type="number">
+    Unique comic identifier
+  </ResponseField>
+  
+  <ResponseField name="title" type="string">
+    Comic title
+  </ResponseField>
+  
+  <ResponseField name="total_issues" type="number">
+    Total number of issues in this comic series
+  </ResponseField>
+  
+  <ResponseField name="year" type="number">
+    Publication year
+  </ResponseField>
+  
+  <ResponseField name="cover" type="string">
+    URL to cover image
+  </ResponseField>
+  
+  <ResponseField name="language" type="string | null">
+    Comic language (from Idiom table)
+  </ResponseField>
+  
+  <ResponseField name="publisher" type="string | null">
+    Publisher name
+  </ResponseField>
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "count": 2,
+  "data": [
+    {
+      "id": 1,
+      "title": "The Amazing Spider-Man",
+      "total_issues": 50,
+      "year": 1963,
+      "cover": "https://example.com/cover.jpg",
+      "language": "English",
+      "publisher": "Marvel Comics"
+    },
+    {
+      "id": 2,
+      "title": "Batman",
+      "total_issues": 100,
+      "year": 1940,
+      "cover": "https://example.com/batman-cover.jpg",
+      "language": "English",
+      "publisher": "DC Comics"
+    }
+  ]
+}
+```
+
+Comics are ordered by title (ascending) and then by year (ascending).
+
+---
+
+## Get Comic by ID or Slug
+
+Retrieve detailed information about a specific comic using its ID or slug.
+
+```bash
+GET /api/comics/:id
+```
+
+### Path Parameters
+
+<ParamField path="id" type="string | number" required>
+  Comic identifier. Can be:
+  - Numeric ID: `1`
+  - Title slug: `the-amazing-spider-man`
+  - Title slug with year: `batman-1940`
+  - Title slug with ID: `superman-123`
+</ParamField>
+
+### Slug Matching Logic
+
+The endpoint supports flexible slug matching with the following priority:
+
+1. **Numeric ID**: If the parameter is a valid number, it's used directly
+2. **Slug with Year**: Pattern `title-YYYY` (e.g., `batman-1940`)
+3. **Slug with ID**: Pattern `title-123` (e.g., `superman-123`)
+4. **Title Slug Only**: Matches slugified title (e.g., `the-amazing-spider-man`)
+
+Slugs are generated using a slugify function that converts titles to URL-friendly strings.
+
+### Example Requests
+
+```bash
+# By numeric ID
+curl http://localhost:3000/api/comics/1
+
+# By title slug
+curl http://localhost:3000/api/comics/the-amazing-spider-man
+
+# By title slug with year
+curl http://localhost:3000/api/comics/batman-1940
+```
+
+### Response
+
+<ResponseField name="success" type="boolean" required>
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="object" required>
+  Comic object with detailed information
+  
+  <ResponseField name="id" type="number">
+    Unique comic identifier
+  </ResponseField>
+  
+  <ResponseField name="title" type="string">
+    Comic title
+  </ResponseField>
+  
+  <ResponseField name="total_issues" type="number">
+    Total number of issues
+  </ResponseField>
+  
+  <ResponseField name="year" type="number">
+    Publication year
+  </ResponseField>
+  
+  <ResponseField name="cover" type="string">
+    Cover image URL
+  </ResponseField>
+  
+  <ResponseField name="language" type="string | null">
+    Comic language
+  </ResponseField>
+  
+  <ResponseField name="publisher" type="string | null">
+    Publisher name
+  </ResponseField>
+  
+  <ResponseField name="authors" type="array">
+    Array of author objects with full author details from the Author table
+  </ResponseField>
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "title": "The Amazing Spider-Man",
+    "total_issues": 50,
+    "year": 1963,
+    "cover": "https://example.com/cover.jpg",
+    "language": "English",
+    "publisher": "Marvel Comics",
+    "authors": [
+      {
+        "id": 1,
+        "name": "Stan Lee"
+      },
+      {
+        "id": 2,
+        "name": "Steve Ditko"
+      }
+    ]
+  }
+}
+```
+
+### Error Response
+
+```json
+{
+  "success": false,
+  "message": "Comic not found"
+}
+```
+
+---
+
+## Get Comic Issues
+
+Retrieve all issues for a specific comic.
+
+```bash
+GET /api/comics/:id/issues
+```
+
+### Path Parameters
+
+<ParamField path="id" type="string | number" required>
+  Comic identifier. Supports the same flexible matching as the Get Comic endpoint:
+  - Numeric ID
+  - Title slug
+  - Title slug with year
+  - Title slug with ID
+</ParamField>
+
+### Example Requests
+
+```bash
+# By numeric ID
+curl http://localhost:3000/api/comics/1/issues
+
+# By slug
+curl http://localhost:3000/api/comics/the-amazing-spider-man/issues
+```
+
+### Response
+
+<ResponseField name="success" type="boolean" required>
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="comic_id" type="number" required>
+  The resolved numeric ID of the comic
+</ResponseField>
+
+<ResponseField name="count" type="number" required>
+  Number of issues returned
+</ResponseField>
+
+<ResponseField name="data" type="array" required>
+  Array of issue objects
+  
+  <ResponseField name="id" type="number">
+    Issue identifier
+  </ResponseField>
+  
+  <ResponseField name="title" type="string">
+    Issue title
+  </ResponseField>
+  
+  <ResponseField name="issueNumber" type="number">
+    Issue number in the series
+  </ResponseField>
+  
+  <ResponseField name="year" type="number">
+    Publication year
+  </ResponseField>
+  
+  <ResponseField name="size" type="string">
+    File size or page count
+  </ResponseField>
+  
+  <ResponseField name="series" type="string">
+    Series information
+  </ResponseField>
+  
+  <ResponseField name="genres" type="array">
+    Array of genre tags
+  </ResponseField>
+  
+  <ResponseField name="link" type="string">
+    Download or reference link
+  </ResponseField>
+  
+  <ResponseField name="cover" type="string">
+    Cover image URL
+  </ResponseField>
+  
+  <ResponseField name="synopsis" type="string">
+    Issue synopsis/description
+  </ResponseField>
+  
+  <ResponseField name="language" type="string | null">
+    Issue language
+  </ResponseField>
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "comic_id": 1,
+  "count": 2,
+  "data": [
+    {
+      "id": 101,
+      "title": "The Amazing Spider-Man #1",
+      "issueNumber": 1,
+      "year": 1963,
+      "size": "22 pages",
+      "series": "Volume 1",
+      "genres": ["Superhero", "Action"],
+      "link": "https://example.com/issue1.cbr",
+      "cover": "https://example.com/issue1-cover.jpg",
+      "synopsis": "The first issue of The Amazing Spider-Man...",
+      "language": "English"
+    },
+    {
+      "id": 102,
+      "title": "The Amazing Spider-Man #2",
+      "issueNumber": 2,
+      "year": 1963,
+      "size": "22 pages",
+      "series": "Volume 1",
+      "genres": ["Superhero", "Action"],
+      "link": "https://example.com/issue2.cbr",
+      "cover": "https://example.com/issue2-cover.jpg",
+      "synopsis": "Spider-Man faces new challenges...",
+      "language": "English"
+    }
+  ]
+}
+```
+
+Issues are ordered by issue number (ascending).
+
+### Error Response
+
+```json
+{
+  "success": false,
+  "message": "Comic not found"
+}
+```

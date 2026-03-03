@@ -1,0 +1,292 @@
+---
+title: Features
+description: Explore the powerful features that make pInk the perfect comic book catalog system
+---
+
+## Overview
+
+pInk provides a comprehensive set of features designed to make browsing, discovering, and managing your comic book collection effortless and enjoyable.
+
+## Core Features
+
+<CardGroup cols={2}>
+  <Card title="Comic Catalog" icon="books">
+    ### Clean Interface
+    
+    Browse your entire comic collection through an intuitive, visually-driven interface. Each comic is displayed with its cover art, title, publisher, year, and total issue count.
+    
+    **Key capabilities:**
+    - Grid and list view modes
+    - Alphabetical sorting by title
+    - Cover art thumbnails
+    - Quick access to issue details
+  </Card>
+
+  <Card title="Advanced Filtering" icon="filter">
+    ### Instant Filtering
+    
+    Filter your collection by multiple criteria with real-time results. The filtering system provides instant feedback as you select options.
+    
+    **Filter by:**
+    - Publisher (Marvel, DC, etc.)
+    - Language (multiple language support)
+    - Year (chronological filtering)
+    - Multiple active filters simultaneously
+  </Card>
+
+  <Card title="Search Functionality" icon="magnifying-glass">
+    ### Powerful Search
+    
+    Find exactly what you're looking for with integrated search functionality that works across your entire catalog.
+    
+    **Search features:**
+    - Title search
+    - Real-time results
+    - Search highlighting
+    - Pagination support
+  </Card>
+
+  <Card title="Detailed Modal Views" icon="window-maximize">
+    ### Rich Metadata
+    
+    View comprehensive information about each comic issue through an elegant modal interface.
+    
+    **Details include:**
+    - Full synopsis
+    - Issue number and series
+    - Publication year
+    - File size
+    - Genres and categories
+    - Author credits
+    - Direct download links
+  </Card>
+</CardGroup>
+
+## Technical Features
+
+### High Performance
+
+pInk is built for speed and efficiency:
+
+<CodeGroup>
+```typescript Backend Performance
+// ElysiaJS provides fast routing and minimal overhead
+const app = new Elysia()
+  .use(cors())
+  .get("/api/comics", () => comicsController.getAllComics())
+  .get("/api/issues", issuesController.getAllIssues)
+```
+
+```typescript Frontend Optimization
+// React with Vite for instant HMR
+import { useState, useMemo } from "react";
+
+// Optimized filtering with useMemo
+const filteredComics = useMemo(() => {
+  return comics.filter(comic => 
+    matchesFilters(comic, activeFilters)
+  );
+}, [comics, activeFilters]);
+```
+</CodeGroup>
+
+**Performance highlights:**
+- Sub-100ms API response times
+- Instant hot module replacement in development
+- Optimized Supabase queries with indexing
+- Efficient frontend rendering with React 19
+
+### RESTful API
+
+Access your comic catalog programmatically with a clean REST API:
+
+```bash
+# Get all comics
+curl http://localhost:3000/api/comics
+
+# Get specific comic by ID or slug
+curl http://localhost:3000/api/comics/watchmen-1986
+
+# Get all issues for a comic
+curl http://localhost:3000/api/comics/1/issues
+
+# Search and paginate issues
+curl "http://localhost:3000/api/issues?limit=50&offset=0&search=batman"
+```
+
+<Note>
+  In development mode, access interactive API documentation at `/swagger`
+</Note>
+
+### View Modes
+
+Switch between grid and list views based on your preference:
+
+<Tabs>
+  <Tab title="Grid View">
+    **Visual browsing** with cover art prominently displayed
+    - Large cover thumbnails
+    - Responsive grid layout
+    - Optimal for discovery
+    - Adjusts to screen size
+  </Tab>
+  <Tab title="List View">
+    **Dense information** for quick scanning
+    - Compact rows
+    - More items visible at once
+    - Detailed metadata inline
+    - Faster navigation
+  </Tab>
+</Tabs>
+
+### Responsive Design
+
+pInk adapts seamlessly to any device:
+
+| Device | Layout | Experience |
+| --- | --- | --- |
+| Desktop | Multi-column grid | Full-featured interface |
+| Tablet | Adaptive grid | Touch-optimized controls |
+| Mobile | Single column | Mobile-first navigation |
+
+## Data Features
+
+### Comprehensive Metadata
+
+Each comic and issue includes rich metadata:
+
+<AccordionGroup>
+  <Accordion title="Comic Metadata">
+    - **Title**: Full comic series name
+    - **Publisher**: Publishing house (Marvel, DC, etc.)
+    - **Year**: Publication year
+    - **Total Issues**: Number of issues in series
+    - **Cover**: High-quality cover image URL
+    - **Language**: Publication language
+    - **Authors**: Creator credits
+  </Accordion>
+
+  <Accordion title="Issue Metadata">
+    - **Title**: Individual issue title
+    - **Issue Number**: Number in series
+    - **Synopsis**: Detailed description
+    - **Series**: Series information
+    - **Genres**: Categories and tags
+    - **Size**: File size information
+    - **Link**: Direct download link
+    - **Credits**: Artist and writer information
+  </Accordion>
+</AccordionGroup>
+
+### Smart Routing
+
+pInk uses intelligent URL slugs for SEO-friendly navigation:
+
+```typescript
+// Examples of slug formats supported:
+// - /watchmen-1986 (title-year)
+// - /the-amazing-spider-man-123 (title-id)
+// - /52 (numeric ID)
+// - /batman (simple slug)
+
+// Automatic slug resolution
+const { data } = await api.getComicById("watchmen-1986");
+```
+
+## User Experience Features
+
+### Interactive Controls
+
+<Steps>
+  <Step title="Filter Panel">
+    Toggle the filter dropdown to select multiple criteria. The badge shows active filter count.
+  </Step>
+  <Step title="View Toggle">
+    Switch between grid and list views with tooltips showing on hover.
+  </Step>
+  <Step title="Back Navigation">
+    Navigate back to the catalog when viewing individual comic issues.
+  </Step>
+</Steps>
+
+### SEO Optimization
+
+pInk includes built-in SEO features:
+
+- Dynamic page titles
+- Meta descriptions
+- Open Graph tags
+- Canonical URLs
+- React Helmet integration
+
+```tsx
+// SEO implementation
+import { Helmet } from 'react-helmet-async';
+
+<Helmet>
+  <title>{comic.title} - pInk</title>
+  <meta name="description" content={comic.synopsis} />
+</Helmet>
+```
+
+## Developer Features
+
+### API Documentation
+
+Automatic Swagger documentation in development:
+
+```typescript
+import { swagger } from "@elysiajs/swagger";
+
+const app = new Elysia()
+  .use((app) =>
+    process.env.NODE_ENV === "development" 
+      ? app.use(swagger()) 
+      : app
+  );
+```
+
+Access at: `http://localhost:3000/swagger`
+
+### Health Checks
+
+Monitor system status:
+
+```bash
+curl http://localhost:3000/health
+```
+
+```json
+{
+  "status": "OK",
+  "timestamp": "2026-03-03T14:00:00.000Z",
+  "version": "2.4.1"
+}
+```
+
+### Database Connection Testing
+
+Automatic connection validation on startup:
+
+```bash
+🔍 Testing Supabase connection...
+🔗 Connecting to: https://your-project.supabase.co
+✅ Supabase connection SUCCESSFUL!
+📊 Database test: Found 150 comics in database
+🚀 Database ready for API requests!
+```
+
+<Warning>
+  If database connection fails, the server provides detailed error messages and solutions
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Set up pInk in your environment
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/overview">
+    Explore the complete API documentation
+  </Card>
+</CardGroup>

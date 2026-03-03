@@ -1,0 +1,209 @@
+---
+title: 'Comic Browsing'
+description: 'Browse the pInk comic catalog with an intuitive grid layout and powerful search'
+icon: 'grid-2'
+---
+
+## Overview
+
+pInk provides a streamlined browsing experience for exploring the comic catalog. Users can view all available comics in a responsive grid layout with instant search capabilities.
+
+## Grid Layout
+
+The home page displays comics in a responsive grid using the `ComicCard` component. The layout automatically adapts between grid and list views.
+
+### Comic Cards
+
+Each comic is displayed with:
+- **Cover image** with fallback placeholder
+- **Title** and year
+- **Metadata**: Release year, issue count, language, and publisher
+
+```tsx Home.tsx
+<div className={`cards has-content ${viewMode === "list" ? "list-view" : ""}`}>
+  {filteredItems.map((item) => (
+    <ComicCard
+      key={item.id}
+      comic={item}
+    />
+  ))}
+</div>
+```
+
+### ComicCard Component
+
+The `ComicCard` component (src/components/ComicCard.tsx:11) creates clickable cards that navigate to the comic detail page:
+
+```tsx ComicCard.tsx
+const ComicCard: React.FC<ComicCardProps> = ({ comic }) => {
+  const metaInfo = [
+    `Lançamento: ${comic.year || "N/A"}`,
+    `Edições: ${comic.total_issues || 0}`,
+    `Idioma: ${comic.language || "N/A"}`,
+    `Editora: ${comic.publisher || "N/A"}`,
+  ].join(" | ");
+
+  const slug = slugify(comic.title);
+
+  return (
+    <Link to={`/${slug}-${comic.year}`} className="card">
+      <div className="card-image">
+        <img
+          src={comic.cover || PLACEHOLDER_IMAGE}
+          alt={`Capa do quadrinho ${comic.title} de ${comic.year}`}
+          referrerPolicy="no-referrer"
+          onError={(e: any) => {
+            e.target.src = PLACEHOLDER_IMAGE;
+          }}
+        />
+      </div>
+      <div className="card-info">
+        <h3 className="card-title">{comic.title}</h3>
+        <div className="card-meta">{metaInfo}</div>
+      </div>
+    </Link>
+  );
+};
+```
+
+## View Modes
+
+Users can toggle between two display modes:
+
+<CardGroup cols={2}>
+  <Card title="Grid View" icon="grid-2">
+    Default view showing comics in a responsive grid with large cover images
+  </Card>
+  <Card title="List View" icon="list">
+    Compact view showing comics in a vertical list format
+  </Card>
+</CardGroup>
+
+The view mode is controlled via the `ControlsBar` component and persisted in component state:
+
+```tsx Home.tsx
+const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+```
+
+## Search Functionality
+
+Real-time search is implemented in the `Header` component with instant filtering:
+
+### Header Search
+
+The search input toggles on click and filters results as you type:
+
+```tsx Header.tsx
+<input
+  id="search"
+  type="text"
+  value={searchTerm}
+  onChange={(e) => onSearchChange((e.target as HTMLInputElement).value)}
+  placeholder={view === "home" ? "Buscar quadrinho..." : "Buscar edição..."}
+/>
+```
+
+### Client-Side Filtering
+
+Search results are filtered instantly using `useMemo` for optimal performance (src/pages/Home.tsx:49):
+
+```tsx Home.tsx
+const filteredItems = useMemo(() => {
+  let filtered = allComics.filter((item) =>
+    item.title.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (activeFilters.year.length > 0) {
+    filtered = filtered.filter((item) =>
+      activeFilters.year.includes(item.year?.toString())
+    );
+  }
+  if (activeFilters.publisher.length > 0) {
+    filtered = filtered.filter((c) =>
+      activeFilters.publisher.includes(c.publisher)
+    );
+  }
+  if (activeFilters.language.length > 0) {
+    filtered = filtered.filter((c) =>
+      activeFilters.language.includes(c.language)
+    );
+  }
+  return filtered;
+}, [allComics, searchTerm, activeFilters]);
+```
+
+## Data Loading
+
+Comics are loaded from the API on mount using the `api.getAllComics()` method:
+
+```tsx Home.tsx
+useEffect(() => {
+  const loadComics = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await api.getAllComics();
+      setAllComics(response.data);
+    } catch (error) {
+      console.error(error);
+      setError("Não foi possível carregar a lista de quadrinhos.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  loadComics();
+}, []);
+```
+
+## Status States
+
+The browsing interface handles multiple states:
+
+<Steps>
+  <Step title="Loading State">
+    Displays loading indicator while fetching comics
+  </Step>
+  <Step title="Error State">
+    Shows error message with retry button if API call fails
+  </Step>
+  <Step title="Empty State">
+    Displays message when no comics match filters/search
+  </Step>
+  <Step title="Content State">
+    Renders comic grid when data is available
+  </Step>
+</Steps>
+
+## Auto-Hide Controls
+
+The controls bar automatically hides on scroll down and reappears on scroll up for an immersive browsing experience (src/pages/Home.tsx:72):
+
+```tsx Home.tsx
+const handleScroll = () => {
+  const scrollTop = scrollElement.scrollTop;
+  if (scrollTop > lastScrollTop.current && scrollTop > 50) {
+    setIsControlsHidden(true);
+  } else if (scrollTop < lastScrollTop.current) {
+    setIsControlsHidden(false);
+  }
+  lastScrollTop.current = scrollTop;
+};
+```
+
+## SEO Optimization
+
+The home page includes comprehensive SEO meta tags updated dynamically:
+
+```tsx Home.tsx
+useEffect(() => {
+  updateMetaTags({
+    title: "pInk | Catálogo de Quadrinhos Gratuitos",
+    description: "Explore o pInk, o melhor catálogo de quadrinhos gratuitos da web! Encontre edições da Marvel, DC, Image e muito mais.",
+    keywords: "catálogo de quadrinhos, hqs gratuitas, baixar hqs, ler quadrinhos online, marvel comics, dc comics, image comics, pInk comics",
+  });
+}, []);
+```
+
+<Note>
+  The browsing experience is fully responsive and optimized for both desktop and mobile devices.
+</Note>

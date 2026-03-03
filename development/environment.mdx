@@ -1,0 +1,196 @@
+---
+title: "Environment Variables"
+description: "Configure environment variables for pInk development and production"
+icon: "gear"
+---
+
+## Overview
+
+pInk requires Supabase credentials to connect to your database. All environment variables should be stored in a `.env` file in your project root.
+
+## Setup Instructions
+
+1. Copy the example environment file:
+
+```bash
+cp .env.example .env
+```
+
+2. Edit `.env` with your actual Supabase credentials (see [Database Setup](/development/database-setup) for how to obtain these values)
+
+## Required Variables
+
+<ParamField path="SUPABASE_URL" type="string" required>
+  Your Supabase project URL.
+  
+  **Format**: `https://your-project-ref.supabase.co`
+  
+  **Where to find**: Supabase Dashboard → Settings → API → Project URL
+  
+  **Used in**: `src/server/config/database.ts:3-4`
+  
+  ```typescript
+  const SUPABASE_URL = process.env.SUPABASE_URL || "https://placeholder.supabase.co";
+  ```
+  
+  <Warning>
+    If missing, the server will use a placeholder value and log a warning:
+    ```
+    ⚠️ Warning: SUPABASE_URL or SUPABASE_ANON_KEY is missing in process.env
+    ```
+    
+    Reference: `src/server/config/database.ts:10-14`
+  </Warning>
+</ParamField>
+
+<ParamField path="SUPABASE_ANON_KEY" type="string" required>
+  Your Supabase anonymous/public API key.
+  
+  **Format**: Long alphanumeric string (starts with `eyJ...`)
+  
+  **Where to find**: Supabase Dashboard → Settings → API → Project API keys → `anon` `public`
+  
+  **Used in**: `src/server/config/database.ts:5`
+  
+  ```typescript
+  const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || "placeholder-key";
+  ```
+  
+  <Warning>
+    This is your **public** key and is safe to use in client-side code. Never use your `service_role` key in environment variables - it bypasses Row Level Security (RLS).
+  </Warning>
+</ParamField>
+
+## Optional Variables
+
+<ParamField path="NODE_ENV" type="string" default="development">
+  Application environment mode.
+  
+  **Accepted values**: 
+  - `development` - Enables Swagger API documentation
+  - `production` - Disables Swagger, optimized for production
+  
+  **Used in**: 
+  - `src/server/index.ts:14` - Swagger conditional loading
+  - `src/server/index.ts:75` - Server startup logic
+  - `src/server/config/database.ts:46` - Connection test logging
+  
+  ```typescript
+  .use((app) =>
+    process.env.NODE_ENV === "development" ? app.use(swagger()) : app,
+  )
+  ```
+</ParamField>
+
+<ParamField path="PORT" type="number" default="3000">
+  Port number for the API server.
+  
+  **Used in**: `src/server/index.ts:9`
+  
+  ```typescript
+  const PORT = process.env.PORT || 3000;
+  ```
+  
+  **Note**: On Vercel, this is automatically set by the platform. You typically only need to set this for local development if port 3000 is already in use.
+</ParamField>
+
+<ParamField path="VERCEL" type="boolean" default="undefined">
+  Automatically set by Vercel during deployment.
+  
+  **Used in**: `src/server/index.ts:75` - Prevents auto-start in serverless environment
+  
+  ```typescript
+  if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
+    start().catch((err) => {
+      console.error("❌ Failed to start server:", err);
+      process.exit(1);
+    });
+  }
+  ```
+  
+  <Info>
+    You don't need to manually set this variable. Vercel sets it automatically.
+  </Info>
+</ParamField>
+
+## Example Configuration
+
+### Development (.env)
+
+```bash
+# Supabase Configuration
+SUPABASE_URL=https://abcdefghijklmnop.supabase.co
+SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+# Optional: Development settings
+NODE_ENV=development
+PORT=3000
+```
+
+### Production (Vercel Environment Variables)
+
+In your Vercel project settings, add:
+
+| Name | Value |
+|------|-------|
+| `SUPABASE_URL` | `https://your-project.supabase.co` |
+| `SUPABASE_ANON_KEY` | `eyJhbGciOiJIUzI1NiIs...` |
+| `NODE_ENV` | `production` |
+
+## Database Client Configuration
+
+The Supabase client is configured in `src/server/config/database.ts:16-24`:
+
+```typescript
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+  },
+  db: {
+    schema: "public",
+  },
+});
+```
+
+**Configuration notes**:
+- **persistSession: false** - No authentication session persistence (server-side only)
+- **autoRefreshToken: false** - No token refresh (using anon key)
+- **schema: "public"** - Uses the default PostgreSQL public schema
+
+## Verification
+
+After configuring your environment variables, verify the setup:
+
+```bash
+bun run server
+```
+
+Successful output:
+
+```
+🔍 Testing Supabase connection...
+🔗 Connecting to: https://your-project.supabase.co
+✅ Supabase connection SUCCESSFUL!
+📊 Database test: Found X comics in database
+🌍 Environment: development
+🚀 Database ready for API requests!
+🚀 pInk server running on http://localhost:3000
+```
+
+## Common Issues
+
+If you encounter errors, see:
+- [Troubleshooting Guide](/development/troubleshooting) - Common environment variable issues
+- [Database Setup](/development/database-setup) - How to obtain Supabase credentials
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Database Setup" icon="database" href="/development/database-setup">
+    Create required database tables and schema
+  </Card>
+  <Card title="Deployment" icon="rocket" href="/development/deployment">
+    Deploy your pInk instance to production
+  </Card>
+</CardGroup>
